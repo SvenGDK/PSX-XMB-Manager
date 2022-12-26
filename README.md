@@ -1,5 +1,5 @@
 # PSX XMB Manager
-A new tools that simplifies the installation of homebrew and games on the XMB of the PSX.
+A new tool that simplifies the installation of homebrew and games on the XMB of the PSX.
 
 ## Notes
 - The first release is able to install homebrew and PS2 DVD (.iso) games, CD games support will follow
