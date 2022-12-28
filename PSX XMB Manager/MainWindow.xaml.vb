@@ -532,10 +532,18 @@ Class MainWindow
             PrepareProjectGroupBox.IsEnabled = True
             InstallProjectGroupBox.IsEnabled = True
             AppMenu.IsEnabled = True
+            EditProjectButton.IsEnabled = True
+            PrepareProjectButton.IsEnabled = True
+            ConnectButton.IsEnabled = True
+            InstallButton.IsEnabled = True
         Else
             PrepareProjectGroupBox.IsEnabled = False
             InstallProjectGroupBox.IsEnabled = False
             AppMenu.IsEnabled = False
+            EditProjectButton.IsEnabled = False
+            PrepareProjectButton.IsEnabled = False
+            ConnectButton.IsEnabled = False
+            InstallButton.IsEnabled = False
         End If
     End Sub
 
