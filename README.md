@@ -8,6 +8,7 @@ A new tool that simplifies the installation of homebrew and games on the XMB of 
 - Features shown in the "XMB" menu will be available on next release.
 - Some type of backup manager will be available too on a later release (managing the contents of partitions).
 - It is not recommended to abort an installation within the first 3%, this could corrupt your HDD. The same goes for the last percentages of the installation.
+- Only connect your PSX's HDD locally if you know how to !
 
 ## Required drivers
 NBD (recommended and does not require opening the console)
@@ -17,7 +18,7 @@ NBD (recommended and does not require opening the console)
   It can be downloaded from here: https://cloudbase.it/ceph-for-windows/
   - Install the client and reboot (required)
 
-This tool allows also the installation on a directly connected HDD, but do not 2 HDDs at the same time, there's no "Change connected PS2 HDD" option yet.
+This tool allows also the installation on a directly connected HDD, but do not connect 2 HDDs at the same time, there's no "Change connected PS2 HDD" option yet.
 
 ## Creating a new project
 - Go to Projects -> New -> You can choose here between a game or homebrew (app) project
