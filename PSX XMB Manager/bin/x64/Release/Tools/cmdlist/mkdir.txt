@@ -1,0 +1,18 @@
+device \\.\PHYSICALDRIVE3
+mount PP.LELS-12345..TESTPART
+put EXECUTE.KELF
+mkdir res
+cd res
+put res\info.sys
+put res\jkt_001.png
+put res\jkt_002.png
+put res\jkt_cp.png
+put res\man.xml
+put res\notice.jpg
+mkdir image
+cd image
+put res\image\0.png
+put res\image\1.png
+put res\image\2.png
+umount PP.LELS-12345..TESTPART
+exit

@@ -1,0 +1,23 @@
+device \\.\PHYSICALDRIVE3
+mount PP.SLES-51897..SIMPSONS
+put EXECUTE.KELF
+mkdir res
+cd res
+put res\info.sys
+rename res\info.sys info.sys
+put res\jkt_001.png
+rename res\jkt_001.png jkt_001.png
+put res\jkt_002.png
+rename res\jkt_002.png jkt_002.png
+put res\man.xml
+rename res\man.xml man.xml
+mkdir image
+cd image
+put res\image\0.png
+rename res\image\0.png 0.png
+put res\image\1.png
+rename res\image\1.png 1.png
+put res\image\2.png
+rename res\image\2.png 2.png
+umount
+exit

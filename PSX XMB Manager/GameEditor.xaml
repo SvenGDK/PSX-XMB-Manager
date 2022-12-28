@@ -1,0 +1,41 @@
+﻿<Window x:Class="GameEditor"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PSX_XMB_Manager"
+        mc:Ignorable="d"
+        Title="Game Editor" Height="550" Width="815" ResizeMode="CanMinimize">
+    <Grid>
+        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="69,49,0,0" VerticalAlignment="Top" Width="140"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,10,0,0" TextWrapping="Wrap" Text="Release Date :" VerticalAlignment="Top" Width="250"/>
+        <TextBox x:Name="GameReleaseDateTextBox" HorizontalAlignment="Left" Margin="518,31,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,76,0,0" TextWrapping="Wrap" Text="Developer :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="GameDeveloperTextBox" HorizontalAlignment="Left" Margin="518,97,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,142,0,0" TextWrapping="Wrap" Text="Publisher :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="PublisherTextBox" HorizontalAlignment="Left" Margin="518,163,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,208,0,0" TextWrapping="Wrap" Text="Note :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="GameNoteTextBox" HorizontalAlignment="Left" Margin="518,229,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0" TextWrapping="Wrap" Text="Game Cover :" VerticalAlignment="Top" Width="225"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,274,0,0" TextWrapping="Wrap" Text="Website :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="GameWebsiteTextBox" HorizontalAlignment="Left" Margin="518,295,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,340,0,0" TextWrapping="Wrap" Text="Genre :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="GameGenreTextBox" HorizontalAlignment="Left" Margin="518,361,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,406,0,0" TextWrapping="Wrap" Text="Region :" VerticalAlignment="Top" Width="260"/>
+        <TextBox x:Name="RegionTextBox" HorizontalAlignment="Left" Margin="518,427,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,274,0,0" TextWrapping="Wrap" Text="Game Title :" VerticalAlignment="Top" Width="250"/>
+        <TextBox x:Name="GameTitleTextBox" HorizontalAlignment="Left" Margin="10,295,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="250" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,340,0,0" TextWrapping="Wrap" Text="Game ID :" VerticalAlignment="Top" Width="250"/>
+        <TextBox x:Name="GameIDTextBox" HorizontalAlignment="Left" Margin="10,361,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="250" Height="40"/>
+        <CheckBox x:Name="ShowGameIDCheckBox" Content="Show the Subtitle in XMB" HorizontalAlignment="Left" Margin="10,406,0,0" VerticalAlignment="Top" Width="250"/>
+        <CheckBox x:Name="ShowCopyrightCheckBox" Content="Show copyright informations on XMB" HorizontalAlignment="Left" Margin="10,426,0,0" VerticalAlignment="Top" Width="250"/>
+        <Button x:Name="SaveButton" Content="Save Game ressources" HorizontalAlignment="Left" Margin="518,484,0,0" VerticalAlignment="Top" Width="260"/>
+        <TextBlock HorizontalAlignment="Left" Margin="274,10,0,0" TextWrapping="Wrap" Text="Background Image :" VerticalAlignment="Top" Width="225"/>
+        <TextBlock HorizontalAlignment="Left" Margin="274,208,0,0" TextWrapping="Wrap" Text="Screenshots :" VerticalAlignment="Top" Width="225"/>
+        <Image x:Name="ScreenshotImage1PictureBox" HorizontalAlignment="Left" Height="85" Margin="306,249,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <Image x:Name="ScreenshotImage2PictureBox" HorizontalAlignment="Left" Height="85" Margin="306,346,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <Image x:Name="BackgroundImagePictureBox" HorizontalAlignment="Left" Height="85" Margin="306,51,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <Button x:Name="LoadFromPSXButton" Content="Load from PSXDatacenter" HorizontalAlignment="Left" Margin="10,484,0,0" VerticalAlignment="Top" Width="260"/>
+
+    </Grid>
+</Window>

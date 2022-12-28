@@ -1,0 +1,3 @@
+device \\.\PHYSICALDRIVE3
+mkpart PP.SLES-51897..SIMPSONS 128M PFS
+exit
