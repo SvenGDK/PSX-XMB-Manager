@@ -94,6 +94,12 @@
     <Compile Include="NewGameProject.xaml.vb">
       <DependentUpon>NewGameProject.xaml</DependentUpon>
     </Compile>
+    <Compile Include="NewPartition.xaml.vb">
+      <DependentUpon>NewPartition.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PartitionManager.xaml.vb">
+      <DependentUpon>PartitionManager.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Utils.vb" />
     <Page Include="AppEditor.xaml">
       <SubType>Designer</SubType>
@@ -126,6 +132,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NewGameProject.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="NewPartition.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="PartitionManager.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

@@ -10,7 +10,11 @@ Public Class GameEditor
 
     Private Sub LoadFromPSXButton_Click(sender As Object, e As RoutedEventArgs) Handles LoadFromPSXButton.Click
         Try
-            PSXDatacenterBrowser.Navigate("https://psxdatacenter.com/psx2/games2/" + GameIDTextBox.Text + ".html")
+            If Not String.IsNullOrWhiteSpace(GameIDTextBox.Text) Then
+                PSXDatacenterBrowser.Navigate("https://psxdatacenter.com/psx2/games2/" + GameIDTextBox.Text + ".html")
+            Else
+                MsgBox("Please enter a Game ID (SLUS-12345) to perform a search.", MsgBoxStyle.Exclamation)
+            End If
         Catch ex As Exception
             MsgBox("Could not load game images and informations, please check your Game ID.", MsgBoxStyle.Exclamation, "No information found for this Game ID")
         End Try
@@ -24,7 +28,8 @@ Public Class GameEditor
         Dim Quantizer As New WuQuantizer()
 
         'Save selected XMB cover as compressed PNG
-        If Not String.IsNullOrEmpty(CoverPictureBox.Tag.ToString) Then
+        'Skips now already saved art
+        If Not String.IsNullOrEmpty(CoverPictureBox.Tag.ToString) And Not CoverPictureBox.Tag.ToString = ProjectDirectory + "\res\jkt_001.png" Then
             Dim Cover1Bitmap As Bitmap = GetResizedBitmap(CoverPictureBox.Tag.ToString, 140, 200)
             Dim Cover2Bitmap As Bitmap = GetResizedBitmap(CoverPictureBox.Tag.ToString, 74, 108)
 
@@ -49,7 +54,7 @@ Public Class GameEditor
             End Try
         End If
 
-        If Not String.IsNullOrWhiteSpace(BackgroundImagePictureBox.Tag.ToString) Then
+        If Not String.IsNullOrWhiteSpace(BackgroundImagePictureBox.Tag.ToString) And Not BackgroundImagePictureBox.Tag.ToString = ProjectDirectory + "\res\image\0.png" Then
             Dim BackgroundImageBitmap As Bitmap = GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
 
             If BackgroundImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
@@ -67,7 +72,7 @@ Public Class GameEditor
             End Try
         End If
 
-        If Not String.IsNullOrWhiteSpace(ScreenshotImage1PictureBox.Tag.ToString) Then
+        If Not String.IsNullOrWhiteSpace(ScreenshotImage1PictureBox.Tag.ToString) And Not ScreenshotImage1PictureBox.Tag.ToString = ProjectDirectory + "\res\image\1.png" Then
             Dim ScreenshotImageBitmap As Bitmap = GetResizedBitmap(ScreenshotImage1PictureBox.Tag.ToString, 640, 350)
 
             If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
@@ -84,7 +89,7 @@ Public Class GameEditor
                 ScreenshotImageBitmap.Dispose()
             End Try
         End If
-        If Not String.IsNullOrWhiteSpace(ScreenshotImage2PictureBox.Tag.ToString) Then
+        If Not String.IsNullOrWhiteSpace(ScreenshotImage2PictureBox.Tag.ToString) And Not ScreenshotImage2PictureBox.Tag.ToString = ProjectDirectory + "\res\image\2.png" Then
             Dim ScreenshotImageBitmap As Bitmap = GetResizedBitmap(ScreenshotImage2PictureBox.Tag.ToString, 640, 350)
 
             If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then

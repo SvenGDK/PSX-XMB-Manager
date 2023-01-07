@@ -31,7 +31,6 @@ Public Class NewAppProject
 
         If Directory.Exists(ProjectDirectoryTextBox.Text) AndAlso Directory.Exists(ProjectDirectoryTextBox.Text + "\res") Then
             If File.Exists(ProjectDirectoryTextBox.Text + "\res\jkt_002.png") Then
-                'NewAppEditor.CoverPictureBox.Source = Image.FromFile(ProjectDirectoryTextBox.Text + "\res\jkt_002.png")
                 NewAppEditor.CoverPictureBox.Source = New BitmapImage(New Uri(ProjectDirectoryTextBox.Text + "\res\jkt_002.png"))
                 NewAppEditor.CoverPictureBox.Tag = ProjectDirectoryTextBox.Text + "\res\jkt_002.png"
             End If

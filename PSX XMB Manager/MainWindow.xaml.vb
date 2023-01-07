@@ -4,7 +4,7 @@ Imports System.Net
 
 Class MainWindow
 
-    Public MountedDrive As MountedPSXDrive
+    Public Shared MountedDrive As MountedPSXDrive
 
     Public WithEvents HDL_DumpWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
     Dim WithEvents ContentDownloader As New WebClient()
@@ -101,7 +101,13 @@ Class MainWindow
 
         'Check if NBD driver is installed
         Using WNBDClient As New Process()
-            WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+
+            If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+            Else
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+            End If
+
             WNBDClient.StartInfo.Arguments = "-v"
             WNBDClient.StartInfo.RedirectStandardOutput = True
             WNBDClient.StartInfo.UseShellExecute = False
@@ -148,7 +154,13 @@ Class MainWindow
 
     Private Function IsNBDConnected() As Boolean
         Using WNBDClient As New Process()
-            WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+
+            If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+            Else
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+            End If
+
             WNBDClient.StartInfo.Arguments = "list"
             WNBDClient.StartInfo.RedirectStandardOutput = True
             WNBDClient.StartInfo.UseShellExecute = False
@@ -192,6 +204,8 @@ Class MainWindow
             Dim OutputReader As StreamReader = HDLDump.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
+            Dim DriveHDLName As String = ""
+
             'Find the local drive
             For Each Line As String In ProcessOutput
                 If Not String.IsNullOrWhiteSpace(Line) Then
@@ -199,20 +213,36 @@ Class MainWindow
                         'Set the found drive as mounted PSX drive
                         Dim DriveInfos As String() = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)
                         If DriveInfos(0) IsNot Nothing Then
-                            MountStatusLabel.Text = "on " + DriveInfos(0).Trim()
-                            MountStatusLabel.Foreground = Brushes.Green
-                            MountedDrive.HDLDriveName = DriveInfos(0).Trim()
-                            Return True
+                            DriveHDLName = DriveInfos(0).Trim()
+                            Exit For
                         End If
                     End If
                 End If
             Next
+
+            If Not String.IsNullOrWhiteSpace(DriveHDLName) Then
+                MountStatusLabel.Text = "on " + DriveHDLName
+                MountStatusLabel.Foreground = Brushes.Green
+                MountedDrive.HDLDriveName = DriveHDLName
+                Return True
+            Else
+                Return False
+            End If
+
         End Using
     End Function
 
     Private Function GetConnectedNBDIP(NBDDriveName As String) As String
+
+        'Get the connected IP address
         Using WNBDClient As New Process()
-            WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+
+            If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+            Else
+                WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+            End If
+
             WNBDClient.StartInfo.Arguments = "show " + NBDDriveName
             WNBDClient.StartInfo.RedirectStandardOutput = True
             WNBDClient.StartInfo.UseShellExecute = False
@@ -222,13 +252,22 @@ Class MainWindow
             Dim OutputReader As StreamReader = WNBDClient.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
+            Dim NBDIP As String = ""
+
             For Each ReturnedLine As String In ProcessOutput
                 If ReturnedLine.Contains("Hostname") Then
-                    Return ReturnedLine.Split(":"c)(1).Trim()
-                    Exit Function
+                    NBDIP = ReturnedLine.Split(":"c)(1).Trim()
+                    Exit For
                 End If
             Next
+
+            If Not String.IsNullOrWhiteSpace(NBDIP) Then
+                Return NBDIP
+            Else
+                Return ""
+            End If
         End Using
+
     End Function
 
     Private Function GetHDLDriveName() As String
@@ -246,6 +285,8 @@ Class MainWindow
             Dim OutputReader As StreamReader = HDLDump.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
+            Dim HDLDriveName As String = ""
+
             'Find the drive
             For Each Line As String In ProcessOutput
                 If Not String.IsNullOrWhiteSpace(Line) Then
@@ -253,13 +294,19 @@ Class MainWindow
                         'Set the found drive as mounted PSX drive
                         Dim DriveInfos As String() = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)
                         If DriveInfos(0) IsNot Nothing Then
-                            MountStatusLabel.Text = "on " + DriveInfos(0).Trim()
-                            MountStatusLabel.Foreground = Brushes.Green
-                            Return DriveInfos(0).Trim()
+                            HDLDriveName = DriveInfos(0).Trim()
                         End If
                     End If
                 End If
             Next
+
+            If Not String.IsNullOrWhiteSpace(HDLDriveName) Then
+                MountStatusLabel.Text = "on " + HDLDriveName
+                MountStatusLabel.Foreground = Brushes.Green
+                Return HDLDriveName
+            Else
+                Return ""
+            End If
         End Using
 
     End Function
@@ -439,66 +486,64 @@ Class MainWindow
 
     Private Sub ConnectButton_Click(sender As Object, e As RoutedEventArgs) Handles ConnectButton.Click
         If ConnectButton.Content.ToString = "Connect" Then
-            Try
-                Using WNBDClient As New Process()
-                    If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
-                        WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
-                    Else
-                        WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
-                    End If
-                    WNBDClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
-                    WNBDClient.StartInfo.RedirectStandardOutput = True
-                    WNBDClient.StartInfo.UseShellExecute = False
-                    WNBDClient.StartInfo.CreateNoWindow = True
-                    WNBDClient.Start()
+            Using WNBDClient As New Process()
 
-                    Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-                    Dim ProcessOutput As String = OutputReader.ReadToEnd()
+                If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+                    WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+                Else
+                    WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+                End If
 
-                    'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
-                    If ProcessOutput.Trim().Contains("libwnbd.dll!WnbdIoctlCreate") Then
-                        MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.")
-                        WNBDClient.Close()
-                        Exit Sub
-                    End If
+                WNBDClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
+                WNBDClient.StartInfo.RedirectStandardError = True
+                WNBDClient.StartInfo.UseShellExecute = False
+                WNBDClient.StartInfo.CreateNoWindow = True
+                WNBDClient.Start()
 
-                    WNBDClient.WaitForExit()
+                Dim ProcessOutput As String
+                Dim ErrorReader As StreamReader = WNBDClient.StandardError
+                ProcessOutput = ErrorReader.ReadToEnd()
 
-                    MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.")
-
+                'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
+                If ProcessOutput.Contains("libwnbd.dll!WnbdIoctlCreate") Then
+                    MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.")
+                    Exit Sub
+                ElseIf ProcessOutput.Contains("the option '--hostname' is required but missing") Then
+                    MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
+                    Exit Sub
+                Else
                     MountedDrive.DriveID = GetHDDID()
+                    MountedDrive.HDLDriveName = GetHDLDriveName()
+
                     InstallButton.IsEnabled = True
                     NBDConnectionLabel.Text = "Connected"
                     NBDConnectionLabel.Foreground = Brushes.Green
                     ConnectButton.Content = "Disconnect"
-                End Using
-            Catch AnyException As Exception
-                MsgBox(AnyException.Message)
-            End Try
-        Else
-            Try
-                Dim WNBDProcess As New Process()
+
+                    MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.")
+                End If
+            End Using
+        ElseIf ConnectButton.Content.ToString = "Disconnect" Then
+            Using WNBDProcess As New Process()
                 If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
                     WNBDProcess.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
                 Else
                     WNBDProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
                 End If
+
                 WNBDProcess.StartInfo.Arguments = "unmap PSXHDD"
                 WNBDProcess.StartInfo.CreateNoWindow = True
                 WNBDProcess.Start()
-                WNBDProcess.WaitForExit()
+            End Using
 
-                MsgBox("Your PSX HDD is now disconnected." + vbCrLf + "You can now safely close the NBD server.")
+            InstallButton.IsEnabled = True
+            NBDConnectionLabel.Text = "Disconnected"
+            NBDConnectionLabel.Foreground = Brushes.Red
+            MountStatusLabel.Text = "Not mounted"
+            MountStatusLabel.Foreground = Brushes.Orange
+            ConnectButton.Content = "Connect"
 
-                InstallButton.IsEnabled = True
-                NBDConnectionLabel.Text = "Disconnected"
-                NBDConnectionLabel.Foreground = Brushes.OrangeRed
-
-                ConnectButton.Content = "Connect"
-
-            Catch AnyException As Exception
-                MsgBox(AnyException.Message)
-            End Try
+            MsgBox("Your PSX HDD is now disconnected." + vbCrLf + "You can now safely close the NBD server.")
         End If
     End Sub
 
@@ -670,12 +715,11 @@ Class MainWindow
         Next
 
         'Set mkpart command
-        Dim CommandFile As String = My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt"
-        Dim CommandFileLines() As String = File.ReadAllLines(CommandFile)
-
-        CommandFileLines(0) = "device " + MountedDrive.DriveID
-        CommandFileLines(1) = "mkpart " + CreatedGamePartition.Replace("__", "PP") + " 128M PFS"
-        File.WriteAllLines(CommandFile, CommandFileLines)
+        Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt", False)
+            CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
+            CommandFileWriter.WriteLine("mkpart " + CreatedGamePartition.Replace("__", "PP") + " 128M PFS")
+            CommandFileWriter.WriteLine("exit")
+        End Using
 
         'Proceed to partition creation
         Dim PFSShellOutput As String
@@ -713,12 +757,11 @@ Class MainWindow
         Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
 
         'Set mkpart command
-        Dim CommandFile As String = My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt"
-        Dim CommandFileLines() As String = File.ReadAllLines(CommandFile)
-
-        CommandFileLines(0) = "device " + MountedDrive.DriveID
-        CommandFileLines(1) = "mkpart " + PartitionName + " 128M PFS"
-        File.WriteAllLines(CommandFile, CommandFileLines)
+        Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt", False)
+            CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
+            CommandFileWriter.WriteLine("mkpart " + PartitionName + " 128M PFS")
+            CommandFileWriter.WriteLine("exit")
+        End Using
 
         'Proceed to partition creation
         Dim PFSShellOutput As String
@@ -864,49 +907,21 @@ Class MainWindow
         LockUI()
 
         StatusLabel.Text = "Installed !"
+        PreparedProjectsComboBox.SelectedItem = Nothing
 
         'Set the current directory back
         Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory)
 
         MsgBox("Installation complete !", MsgBoxStyle.Information)
-
+        StatusLabel.Text = ""
     End Sub
 
     Private Sub ShowPartitionsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles ShowPartitionsMenuItem.Click
         If MountedDrive.HDLDriveName = "" Then
             MsgBox("Please connect to the NBD server first.")
         Else
-            PartitionListComboBox.Items.Clear()
-
-            Dim QueryOutput As String()
-
-            Using HDLDump As New Process()
-                HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                HDLDump.StartInfo.Arguments = "toc " + MountedDrive.HDLDriveName
-                HDLDump.StartInfo.RedirectStandardOutput = True
-                HDLDump.StartInfo.UseShellExecute = False
-                HDLDump.StartInfo.CreateNoWindow = True
-                HDLDump.Start()
-
-                Dim OutputReader As StreamReader = HDLDump.StandardOutput
-                QueryOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-            End Using
-
-            For Each HDDPartition As String In QueryOutput
-                On Error Resume Next 'Supress the Index Out Of Range error if it returns no valid partition
-                HDDPartition = HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4)
-
-                If HDDPartition.Trim().StartsWith("__") Then 'System partition
-                    PartitionListComboBox.Items.Add(HDDPartition.Trim())
-                ElseIf HDDPartition.Trim().StartsWith("__.") Then 'Hidden partition
-                    PartitionListComboBox.Items.Add(HDDPartition.Trim())
-                ElseIf HDDPartition.Trim().StartsWith("PP") Then 'Game or Homebrew partition
-                    PartitionListComboBox.Items.Add(HDDPartition.Trim())
-                ElseIf HDDPartition.Trim().StartsWith("+OPL") Then 'OPL partition
-                    PartitionListComboBox.Items.Add(HDDPartition.Trim())
-                End If
-
-            Next
+            Dim NewPartitionManager As New PartitionManager() With {.ShowActivated = True}
+            NewPartitionManager.Show()
         End If
     End Sub
 

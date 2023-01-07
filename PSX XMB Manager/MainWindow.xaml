@@ -18,9 +18,7 @@
                 <MenuItem x:Name="NBDDriverMenuItem" Header="NBD Driver"/>
             </MenuItem>
             <MenuItem Header="Partitions">
-                <MenuItem x:Name="ShowPartitionsMenuItem" Header="Click to load partitions">
-                    <Label Content="Partitions :"/>
-                    <ComboBox x:Name="PartitionListComboBox" Width="250" Height="25"/>
+                <MenuItem x:Name="ShowPartitionsMenuItem" Header="Partition Manager">
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="XMB">

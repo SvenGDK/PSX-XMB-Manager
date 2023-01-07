@@ -1,3 +1,0 @@
-device \\.\PHYSICALDRIVE3
-mkpart PP.APPS-00002..WLE 128M PFS
-exit

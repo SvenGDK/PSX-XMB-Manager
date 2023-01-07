@@ -93,7 +93,11 @@ Public Class NewGameProject
                 NewGameEditor.GameGenreTextBox.Text = GameInfos(14).Split("="c)(1).Trim()
                 NewGameEditor.RegionTextBox.Text = GameInfos(18).Split("="c)(1).Trim()
             Else
-                NewGameEditor.GameIDTextBox.Text = ProjectIDTextBox.Text.Replace("_", "-").Replace(".", "").Trim()
+                If ProjectIDTextBox.Text.Contains("_") Then
+                    NewGameEditor.GameIDTextBox.Text = ProjectIDTextBox.Text.Replace("_", "-").Replace(".", "").Trim()
+                Else
+                    NewGameEditor.GameIDTextBox.Text = ProjectIDTextBox.Text
+                End If
             End If
 
             NewGameEditor.Show()

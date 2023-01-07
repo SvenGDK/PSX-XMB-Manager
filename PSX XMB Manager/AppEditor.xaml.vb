@@ -28,7 +28,7 @@ Public Class AppEditor
 
     Private Sub SaveButton_Click(sender As Object, e As RoutedEventArgs) Handles SaveButton.Click
         'Save selected XMB cover as compressed PNG
-        If CoverPictureBox.Tag IsNot Nothing Then
+        If CoverPictureBox.Tag IsNot Nothing And Not CoverPictureBox.Tag.ToString = ProjectDirectory + "\res\jkt_002.png" Then
             Dim Quantizer As New WuQuantizer()
             Dim ResizedBitmap As New Bitmap(CType(Image.FromFile(CoverPictureBox.Tag.ToString), Bitmap), New Size(74, 108))
 
