@@ -5,10 +5,8 @@ A new tool that simplifies the installation of homebrew and games on the XMB of 
 
 ## Notes
 - The first release is able to install homebrew and PS2 DVD (.iso) games, CD games support will follow
-- Features shown in the "Partition" menu like partition creation is not enabled yet, the same goes for renaming a partition.
-- Deleting a partition should be made with the latest wLaunchELF's HDDManager, this feature will not be a part of PSX XMB Manager.
-- Features shown in the "XMB" menu will be available on next release.
-- Some type of backup manager will be available too on a later release (managing the contents of partitions).
+- Deleting a partition should be made with the latest wLaunchELF's HDDManager, however you can delete a partition in the Partition Manager.
+- Features shown in the "XMB" menu will be available on a later release.
 - It is not recommended to abort an installation within the first 3%, this could corrupt your HDD. The same goes for the last percentages of the installation.
 - Only connect your PSX's HDD locally if you know how to !
 
@@ -30,7 +28,7 @@ This tool allows also the installation on a directly connected HDD, but do not c
   - Game/Homebrew title: REQUIRED
   - You can load a game ID directly from the ISO file, just browse the ISO file before
 - Save the project, now proceed to "Edit ressources"
-  - Option 1: You can load your own cover art and screenshots by clicking on the picture boxes
+  - Option 1 (Homebrew only atm): You can load your own cover art and screenshots by clicking on the picture boxes
   - Option 2: You can load all art from https://psxdatacenter.com/ by clicking on "Load from PSXDatacenter" </br>
   This works only for games and the game's ID has to be in the database.
   - When done, hit "Save ressources".
