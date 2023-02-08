@@ -4,6 +4,7 @@ A new tool that simplifies the installation of homebrew and games on the XMB of 
 <img width="456" alt="Scr" src="https://user-images.githubusercontent.com/84620/209872767-5a91250f-f63c-4018-a0cf-cbf3ec3c4491.png">
 
 ## Notes
+- Requires FMCB installed on your memory card with Open PS2 Loader (to load games)
 - The first release is able to install homebrew and PS2 DVD (.iso) games, CD games support will follow
 - Deleting a partition should be made with the latest wLaunchELF's HDDManager, however you can delete a partition in the Partition Manager.
 - Features shown in the "XMB" menu will be available on a later release.
