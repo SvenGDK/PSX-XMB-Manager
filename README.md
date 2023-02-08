@@ -40,6 +40,8 @@ This process will add the latest OPL-Launcher as KELF to your game OR wrap the h
 - Note: You can also delete the "EXECUTE.KELF" file inside the "Tools" folder to download the latest version before the prepare process.
 
 ## Installing a project
+- Launch Open PS2 Loader and the NBD server
+- Connect to your PSX
 - Select a prepared project from the list and hit "Install on PSX"
 - After confirming with "yes" the installation process will begin
   - Note: If you install a game over NBD, this process can take up to 1-2 hours depending on game size. </br>
