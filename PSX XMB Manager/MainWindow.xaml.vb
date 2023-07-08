@@ -81,7 +81,7 @@ Class MainWindow
     End Class
 
     Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        Me.Title = String.Format("PSX XMB Manager - {0}.{1}.{2}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Application.Info.Version.Build)
+        Title = String.Format("PSX XMB Manager - {0}.{1}.{2}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Application.Info.Version.Build)
 
         'Set up a projects directory to save all created projects
         If Not Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
@@ -137,7 +137,7 @@ Class MainWindow
                     NBDConnectionStatusLabel.Text = "Local Connection:"
                     NBDConnectionLabel.Text = "Connected"
 
-                    EnterIPLabel.Text = "Local PS2 HDD is connected."
+                    EnterIPLabel.Text = "Local PS2/PSX HDD connected."
                     EnterIPLabel.TextAlignment = TextAlignment.Center
                     ConnectButton.Visibility = Visibility.Hidden
                     PSXIPTextBox.Visibility = Visibility.Hidden
@@ -613,7 +613,7 @@ Class MainWindow
             ElseIf HomebrewTitle.Contains("SMS") Or HomebrewTitle.Contains("Simple Media System") Then
                 HomebrewPartition = "PP.APPS-00004..SMS"
             Else
-                HomebrewPartition = InputBox("Please enter a valid partition name:", "Could not determine partition for this homebrew.", "PP.APP-000.01..APP")
+                HomebrewPartition = InputBox("Please enter a valid partition name:", "Could not determine partition for this homebrew.", "PP.APPS-00001..TITLE")
             End If
 
             StatusLabel.Text = "Creating partition, please wait..."

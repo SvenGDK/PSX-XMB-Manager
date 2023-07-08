@@ -13,10 +13,10 @@ Public Class GameEditor
             If Not String.IsNullOrWhiteSpace(GameIDTextBox.Text) Then
                 PSXDatacenterBrowser.Navigate("https://psxdatacenter.com/psx2/games2/" + GameIDTextBox.Text + ".html")
             Else
-                MsgBox("Please enter a Game ID (SLUS-12345) to perform a search.", MsgBoxStyle.Exclamation)
+                MsgBox("Please enter a valid game ID (SLUS-12345) to perform a search.", MsgBoxStyle.Exclamation)
             End If
         Catch ex As Exception
-            MsgBox("Could not load game images and informations, please check your Game ID.", MsgBoxStyle.Exclamation, "No information found for this Game ID")
+            MsgBox("Could not load game images and information, please check your Game ID.", MsgBoxStyle.Exclamation, "No information found for this game ID")
         End Try
     End Sub
 

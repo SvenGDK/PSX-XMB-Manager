@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="Game Editor" Height="550" Width="815" ResizeMode="CanMinimize">
     <Grid>
-        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="69,49,0,0" VerticalAlignment="Top" Width="140"/>
+        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="69,49,0,0" VerticalAlignment="Top" Width="140" Source="/blankcover.png"/>
         <TextBlock HorizontalAlignment="Left" Margin="518,10,0,0" TextWrapping="Wrap" Text="Release Date :" VerticalAlignment="Top" Width="250"/>
         <TextBox x:Name="GameReleaseDateTextBox" HorizontalAlignment="Left" Margin="518,31,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="260" Height="40"/>
         <TextBlock HorizontalAlignment="Left" Margin="518,76,0,0" TextWrapping="Wrap" Text="Developer :" VerticalAlignment="Top" Width="260"/>

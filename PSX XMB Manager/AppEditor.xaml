@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="AppEditor" Height="545" Width="600" ResizeMode="CanMinimize">
     <Grid>
-        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="76,49,0,0" VerticalAlignment="Top" Width="140"/>
+        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="76,49,0,0" VerticalAlignment="Top" Width="140" Source="/blankcover.png"/>
         <TextBlock HorizontalAlignment="Left" Margin="300,10,0,0" TextWrapping="Wrap" Text="Release Date :" VerticalAlignment="Top" Width="265"/>
         <TextBox x:Name="HomebrewReleaseDateTextBox" HorizontalAlignment="Left" Margin="300,31,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="265" Height="40"/>
         <TextBlock HorizontalAlignment="Left" Margin="300,76,0,0" TextWrapping="Wrap" Text="Developer :" VerticalAlignment="Top" Width="265"/>
@@ -27,7 +27,7 @@
         <TextBox x:Name="HomebrewTitleTextBox" HorizontalAlignment="Left" Margin="10,282,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="250" Height="40"/>
         <TextBlock HorizontalAlignment="Left" Margin="10,327,0,0" TextWrapping="Wrap" Text="Homebrew Subtitle :" VerticalAlignment="Top" Width="250"/>
         <TextBox x:Name="HomebrewSubtitleTextBox" HorizontalAlignment="Left" Margin="10,348,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="250" Height="40"/>
-        <CheckBox x:Name="ShowGameIDCheckBox" Content="Show the Subtitle in XMB" HorizontalAlignment="Left" Margin="10,411,0,0" VerticalAlignment="Top" Width="250"/>
+        <CheckBox x:Name="ShowGameIDCheckBox" Content="Show the subtitle in XMB" HorizontalAlignment="Left" Margin="10,411,0,0" VerticalAlignment="Top" Width="250"/>
         <CheckBox x:Name="ShowCopyrightCheckBox" Content="Show copyright informations on XMB" HorizontalAlignment="Left" Margin="10,431,0,0" VerticalAlignment="Top" Width="250"/>
         <Button x:Name="SaveButton" Content="Save Homebrew ressources" HorizontalAlignment="Left" Margin="300,482,0,0" VerticalAlignment="Top" Width="265"/>
 
