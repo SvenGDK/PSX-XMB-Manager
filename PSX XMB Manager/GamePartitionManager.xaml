@@ -1,0 +1,46 @@
+﻿<Window x:Class="GamePartitionManager"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:PSX_XMB_Manager"
+        mc:Ignorable="d"
+        Title="Game Partition Manager" Height="520" Width="900" Background="#FF252525" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
+    <Grid x:Name="GamePartitionManagerGrid">
+        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="69,49,0,0" VerticalAlignment="Top" Width="140" Source="/blankcover.png"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,10,0,0"  Text="Game Cover :" VerticalAlignment="Top" Width="225" Foreground="White"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,274,0,0"  Text="Game Title :" VerticalAlignment="Top" Width="250" Foreground="White"/>
+        <TextBox x:Name="GameTitleTextBox" HorizontalAlignment="Left" Margin="10,295,0,0"  Text="" VerticalAlignment="Top" Width="250" Height="40"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,340,0,0"  Text="Game ID :" VerticalAlignment="Top" Width="250" Foreground="White"/>
+        <TextBox x:Name="GameIDTextBox" HorizontalAlignment="Left" Margin="10,361,0,0"  Text="" VerticalAlignment="Top" Width="250" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,10,0,0"  Text="Release Date :" VerticalAlignment="Top" Width="250" Foreground="White"/>
+        <TextBox x:Name="GameReleaseDateTextBox" HorizontalAlignment="Left" Margin="518,31,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,56,0,0"  Text="Developer :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="GameDeveloperTextBox" HorizontalAlignment="Left" Margin="518,77,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,102,0,0"  Text="Publisher :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="PublisherTextBox" HorizontalAlignment="Left" Margin="518,123,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,148,0,0"  Text="Note :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="GameNoteTextBox" HorizontalAlignment="Left" Margin="518,169,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,194,0,0"  Text="Website :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="GameWebsiteTextBox" HorizontalAlignment="Left" Margin="518,215,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,240,0,0"  Text="Genre :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="GameGenreTextBox" HorizontalAlignment="Left" Margin="518,261,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,286,0,0"  Text="Region :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="RegionTextBox" HorizontalAlignment="Left" Margin="518,307,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <TextBlock HorizontalAlignment="Left" Margin="274,10,0,0"  Text="Background Image :" VerticalAlignment="Top" Width="225" Foreground="White"/>
+        <TextBlock HorizontalAlignment="Left" Margin="274,208,0,0"  Text="Screenshots :" VerticalAlignment="Top" Width="225" Foreground="White"/>
+        <Image x:Name="ScreenshotImage1PictureBox" HorizontalAlignment="Left" Height="85" Margin="306,249,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <Image x:Name="ScreenshotImage2PictureBox" HorizontalAlignment="Left" Height="85" Margin="306,346,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <Image x:Name="BackgroundImagePictureBox" HorizontalAlignment="Left" Height="85" Margin="306,51,0,0" VerticalAlignment="Top" Width="160" Stretch="UniformToFill"/>
+        <CheckBox x:Name="ShowGameIDCheckBox" Content="Show the Subtitle in XMB" HorizontalAlignment="Left" Margin="10,386,0,0" VerticalAlignment="Top" Width="250" Foreground="White"/>
+        <CheckBox x:Name="ShowCopyrightCheckBox" Content="Show copyright informations on XMB" HorizontalAlignment="Left" Margin="10,406,0,0" VerticalAlignment="Top" Width="250" Foreground="White"/>
+        <Button x:Name="LoadFromPSXButton" Content="Apply Data from PSXDatacenter" HorizontalAlignment="Left" Margin="22,437,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="226" Height="30" FontFamily="Calibri" FontSize="16"/>
+        <Button x:Name="SaveButton" Content="Save &amp; Update Game Resources" HorizontalAlignment="Left" Margin="518,385,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="350" Height="24" FontFamily="Calibri" FontSize="14"/>
+        <Button x:Name="UpdateExecuteKELFButton" Content="Update &amp; Replace EXECUTE.KELF with latest OPL-Launcher" HorizontalAlignment="Left" Margin="518,414,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="350" Height="24" FontFamily="Calibri" FontSize="14"/>
+        <Button x:Name="CloseButton" Content="Unmount &amp; Close" HorizontalAlignment="Left" Margin="518,443,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="350" Height="24" FontFamily="Calibri" FontSize="14"/>
+        <TextBlock HorizontalAlignment="Left" Margin="518,332,0,0"  Text="Uninstall Message :" VerticalAlignment="Top" Width="260" Foreground="White"/>
+        <TextBox x:Name="UninstallMsgTextBox" HorizontalAlignment="Left" Margin="518,353,0,0"  Text="" VerticalAlignment="Top" Width="350" Height="20"/>
+        <Button x:Name="LoadAdditionalImagesButton" Content="Load BG &amp; Screens" HorizontalAlignment="Left" Margin="326,443,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="120" Height="24" FontFamily="Calibri" FontSize="14"/>
+
+    </Grid>
+</Window>

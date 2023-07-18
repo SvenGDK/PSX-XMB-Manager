@@ -10,38 +10,41 @@ Public Class NewGameProject
     End Sub
 
     Private Sub BrowseGameISOButton_Click(sender As Object, e As RoutedEventArgs) Handles BrowseGameISOButton.Click
-        Dim OFD As New Forms.OpenFileDialog() With {.Title = "Choose your .iso file.", .Filter = "iso files (*.iso)|*.iso"}
+        Dim OFD As New Forms.OpenFileDialog() With {.Title = "Choose your .iso or .cue file.", .Filter = "ISO files (*.iso)|*.iso|CUE files (*.cue)|*.cue"}
 
         If OFD.ShowDialog() = Forms.DialogResult.OK Then
             ProjectISOFileTextBox.Text = OFD.FileName
 
-            If MsgBox("Do you want to load the game ID from the disc?" + vbCrLf + "The Game ID is required to install the game.", MsgBoxStyle.YesNo, "") = MsgBoxResult.Yes Then
-                Using SevenZip As New Process()
-                    SevenZip.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\7z.exe"
-                    SevenZip.StartInfo.Arguments = "l -ba """ + OFD.FileName + """"
-                    SevenZip.StartInfo.RedirectStandardOutput = True
-                    SevenZip.StartInfo.UseShellExecute = False
-                    SevenZip.StartInfo.CreateNoWindow = True
-                    SevenZip.Start()
+            If Path.GetExtension(OFD.FileName) = ".iso" Then
+                If MsgBox("Do you want to load the game ID from the disc?" + vbCrLf + "The Game ID is required to install the game.", MsgBoxStyle.YesNo, "") = MsgBoxResult.Yes Then
+                    Using SevenZip As New Process()
+                        SevenZip.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\7z.exe"
+                        SevenZip.StartInfo.Arguments = "l -ba """ + OFD.FileName + """"
+                        SevenZip.StartInfo.RedirectStandardOutput = True
+                        SevenZip.StartInfo.UseShellExecute = False
+                        SevenZip.StartInfo.CreateNoWindow = True
+                        SevenZip.Start()
 
-                    'Read the output
-                    Dim OutputReader As StreamReader = SevenZip.StandardOutput
-                    Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split(New String() {vbCrLf}, StringSplitOptions.None)
+                        'Read the output
+                        Dim OutputReader As StreamReader = SevenZip.StandardOutput
+                        Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split(New String() {vbCrLf}, StringSplitOptions.None)
 
-                    For Each Line As String In ProcessOutput
-                        If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Then
-                            If Line.Contains("Volume:") Then 'ID found in the ISO Header
-                                ProjectIDTextBox.Text = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
-                                Exit For
-                            Else 'ID found in the ISO files
-                                ProjectIDTextBox.Text = String.Join(" ", Line.Split(New Char() {}, StringSplitOptions.RemoveEmptyEntries)).Split(" "c)(5).Trim()
-                                Exit For
+                        For Each Line As String In ProcessOutput
+                            If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Then
+                                If Line.Contains("Volume:") Then 'ID found in the ISO Header
+                                    ProjectIDTextBox.Text = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
+                                    Exit For
+                                Else 'ID found in the ISO files
+                                    ProjectIDTextBox.Text = String.Join(" ", Line.Split(New Char() {}, StringSplitOptions.RemoveEmptyEntries)).Split(" "c)(5).Trim()
+                                    Exit For
+                                End If
                             End If
-                        End If
-                    Next
+                        Next
 
-                End Using
+                    End Using
+                End If
             End If
+
         End If
     End Sub
 
@@ -53,7 +56,7 @@ Public Class NewGameProject
         End If
     End Sub
 
-    Private Sub AdvancedSettingsButton_Click(sender As Object, e As RoutedEventArgs) Handles AdvancedSettingsButton.Click
+    Private Sub AdvancedSettingsButton_Click(sender As Object, e As RoutedEventArgs) Handles EditResourcesButton.Click
         Dim NewGameEditor As New GameEditor() With {.ProjectDirectory = ProjectDirectoryTextBox.Text, .Title = "Game Ressources Editor - " + ProjectDirectoryTextBox.Text}
 
         If Directory.Exists(ProjectDirectoryTextBox.Text) AndAlso Directory.Exists(ProjectDirectoryTextBox.Text + "\res") Then
@@ -110,7 +113,7 @@ Public Class NewGameProject
 
     Private Sub SaveProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles SaveProjectButton.Click
         'Write Project settings to .CFG
-        Using ProjectWriter As New StreamWriter(".\Projects\" + ProjectNameTextBox.Text + ".CFG", False)
+        Using ProjectWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Projects\" + ProjectNameTextBox.Text + ".CFG", False)
             ProjectWriter.WriteLine("TITLE=" + ProjectNameTextBox.Text)
             ProjectWriter.WriteLine("ID=" + ProjectIDTextBox.Text)
             ProjectWriter.WriteLine("DIR=" + ProjectDirectoryTextBox.Text)
@@ -161,4 +164,5 @@ Public Class NewGameProject
             Utils.ReloadProjects()
         End If
     End Sub
+
 End Class

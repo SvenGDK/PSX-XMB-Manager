@@ -1,12 +1,14 @@
-﻿Imports System.ComponentModel
-Imports System.IO
+﻿Imports System.IO
 Imports System.Net
+Imports System.Text.RegularExpressions
+Imports System.Windows.Media.Animation
 
-Class MainWindow
+Public Class NewMainWindow
 
+    Dim WithEvents HDL_Dump As New Process()
     Public Shared MountedDrive As MountedPSXDrive
 
-    Public WithEvents HDL_DumpWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
+    'Public WithEvents HDL_DumpWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
     Dim WithEvents ContentDownloader As New WebClient()
 
     Public Structure MountedPSXDrive
@@ -301,8 +303,17 @@ Class MainWindow
             Next
 
             If Not String.IsNullOrWhiteSpace(HDLDriveName) Then
-                MountStatusLabel.Text = "on " + HDLDriveName
-                MountStatusLabel.Foreground = Brushes.Green
+
+                If MountStatusLabel.CheckAccess() = False Then
+                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
+                                                                MountStatusLabel.Text = "on " + HDLDriveName
+                                                                MountStatusLabel.Foreground = Brushes.Green
+                                                            End Sub)
+                Else
+                    MountStatusLabel.Text = "on " + HDLDriveName
+                    MountStatusLabel.Foreground = Brushes.Green
+                End If
+
                 Return HDLDriveName
             Else
                 Return ""
@@ -353,18 +364,22 @@ Class MainWindow
         Next
     End Sub
 
-    Private Sub NewHomebrewProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewHomebrewProjectMenuItem.Click
+    Private Sub NewHomebrewProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewHomebrewProjectButton.Click
         Dim NewHomebrewProjectWindow As New NewAppProject() With {.ShowActivated = True}
         NewHomebrewProjectWindow.Show()
     End Sub
 
-    Private Sub NewGameProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewGameProjectMenuItem.Click
+    Private Sub NewGameProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewGameProjectButton.Click
         Dim NewGameProjectWindow As New NewGameProject() With {.ShowActivated = True}
         NewGameProjectWindow.Show()
     End Sub
 
     Private Sub NBDDriverMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NBDDriverMenuItem.Click
         Process.Start(New ProcessStartInfo("https://cloudbase.it/ceph-for-windows/") With {.UseShellExecute = True})
+    End Sub
+
+    Private Sub DokanDriverMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles DokanDriverMenuItem.Click
+        Process.Start(New ProcessStartInfo("https://github.com/dokan-dev/dokany/releases") With {.UseShellExecute = True})
     End Sub
 
     Private Sub EditProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles EditProjectButton.Click
@@ -486,6 +501,7 @@ Class MainWindow
 
     Private Sub ConnectButton_Click(sender As Object, e As RoutedEventArgs) Handles ConnectButton.Click
         If ConnectButton.Content.ToString = "Connect" Then
+
             Using WNBDClient As New Process()
 
                 If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
@@ -496,34 +512,16 @@ Class MainWindow
 
                 WNBDClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
                 WNBDClient.StartInfo.RedirectStandardError = True
+                AddHandler WNBDClient.ErrorDataReceived, AddressOf ErrorDataHandler
                 WNBDClient.StartInfo.UseShellExecute = False
                 WNBDClient.StartInfo.CreateNoWindow = True
+
                 WNBDClient.Start()
-
-                Dim ProcessOutput As String
-                Dim ErrorReader As StreamReader = WNBDClient.StandardError
-                ProcessOutput = ErrorReader.ReadToEnd()
-
-                'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
-                If ProcessOutput.Contains("libwnbd.dll!WnbdIoctlCreate") Then
-                    MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.")
-                    Exit Sub
-                ElseIf ProcessOutput.Contains("the option '--hostname' is required but missing") Then
-                    MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
-                    Exit Sub
-                Else
-                    MountedDrive.DriveID = GetHDDID()
-                    MountedDrive.HDLDriveName = GetHDLDriveName()
-
-                    InstallButton.IsEnabled = True
-                    NBDConnectionLabel.Text = "Connected"
-                    NBDConnectionLabel.Foreground = Brushes.Green
-                    ConnectButton.Content = "Disconnect"
-
-                    MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.")
-                End If
+                WNBDClient.BeginErrorReadLine()
             End Using
+
         ElseIf ConnectButton.Content.ToString = "Disconnect" Then
+
             Using WNBDProcess As New Process()
                 If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
                     WNBDProcess.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
@@ -543,7 +541,7 @@ Class MainWindow
             MountStatusLabel.Foreground = Brushes.Orange
             ConnectButton.Content = "Connect"
 
-            MsgBox("Your PSX HDD is now disconnected." + vbCrLf + "You can now safely close the NBD server.")
+            MsgBox("Your PSX HDD is now disconnected." + vbCrLf + "You can now safely close the NBD server.", MsgBoxStyle.Information)
         End If
     End Sub
 
@@ -554,6 +552,8 @@ Class MainWindow
             If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
                 'Identify project type
                 Dim ProjectType As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(4).Split("="c)(1)
+
+                ProgressGrid.Visibility = Visibility.Visible
 
                 If ProjectType = "APP" Then
                     StatusLabel.Text = "Installing Homebrew, please wait..."
@@ -573,22 +573,12 @@ Class MainWindow
     End Sub
 
     Public Sub LockUI()
-        If PrepareProjectGroupBox.IsEnabled = False Then
-            PrepareProjectGroupBox.IsEnabled = True
-            InstallProjectGroupBox.IsEnabled = True
-            AppMenu.IsEnabled = True
-            EditProjectButton.IsEnabled = True
-            PrepareProjectButton.IsEnabled = True
-            ConnectButton.IsEnabled = True
-            InstallButton.IsEnabled = True
+        If MainMenu.IsEnabled Then
+            MainMenu.IsEnabled = False
+            ProjectsGrid.IsEnabled = False
         Else
-            PrepareProjectGroupBox.IsEnabled = False
-            InstallProjectGroupBox.IsEnabled = False
-            AppMenu.IsEnabled = False
-            EditProjectButton.IsEnabled = False
-            PrepareProjectButton.IsEnabled = False
-            ConnectButton.IsEnabled = False
-            InstallButton.IsEnabled = False
+            MainMenu.IsEnabled = True
+            ProjectsGrid.IsEnabled = True
         End If
     End Sub
 
@@ -641,51 +631,31 @@ Class MainWindow
             Dim GameID As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(1).Split("="c)(1)
             Dim GameISO As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(3).Split("="c)(1)
 
+            HDL_Dump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
+            HDL_Dump.StartInfo.RedirectStandardOutput = True
+            AddHandler HDL_Dump.OutputDataReceived, AddressOf HDLDumpOutputDataHandler
+            HDL_Dump.StartInfo.UseShellExecute = False
+            HDL_Dump.StartInfo.CreateNoWindow = True
+            HDL_Dump.EnableRaisingEvents = True
+
             'Check if CD or DVD
             If GetDiscType(GameISO) = DiscType.DVD Then
                 LockUI() 'Disable UI controls
-                HDL_DumpWorker.RunWorkerAsync(New HDL_Dump_Args() With {.Command = "inject_dvd", .Args = {GameTitle, GameISO, GameID}})
+
+                HDL_Dump.StartInfo.Arguments = "inject_dvd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ """ + GameID + """ *u4 -hide"
+                HDL_Dump.Start()
+                HDL_Dump.BeginOutputReadLine()
             Else
-                MsgBox("Not supported yet.", MsgBoxStyle.Exclamation)
-                Exit Sub
+                LockUI()
+
+                HDL_Dump.StartInfo.Arguments = "inject_cd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ """ + GameID + """ *u4 -hide"
+                HDL_Dump.Start()
+                HDL_Dump.BeginOutputReadLine()
             End If
         End If
     End Sub
 
-    Private Sub HDL_DumpWorker_DoWork(sender As Object, e As DoWorkEventArgs) Handles HDL_DumpWorker.DoWork
-        Dim HDLWorker As BackgroundWorker = TryCast(sender, BackgroundWorker)
-        Dim HDLArgs As HDL_Dump_Args = TryCast(e.Argument, HDL_Dump_Args)
-
-        If HDLArgs.Command = "inject_dvd" Then
-            Using HDLDump As New Process()
-                HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                HDLDump.StartInfo.Arguments = "inject_dvd " + MountedDrive.HDLDriveName + " """ + HDLArgs.Args(0) + """ """ + HDLArgs.Args(1) + """ """ + HDLArgs.Args(2) + """ *u4 -hide"
-                HDLDump.StartInfo.RedirectStandardOutput = True
-                HDLDump.StartInfo.UseShellExecute = False
-                HDLDump.StartInfo.CreateNoWindow = True
-                HDLDump.Start()
-
-                While Not HDLDump.HasExited
-                    Dim output = HDLDump.StandardOutput.ReadLine()
-                    HDLWorker.ReportProgress(0, output)
-                End While
-
-            End Using
-        End If
-    End Sub
-
-    Private Sub HDL_DumpWorker_ProgressChanged(sender As Object, e As ProgressChangedEventArgs) Handles HDL_DumpWorker.ProgressChanged
-        StatusLabel.Text = e.UserState.ToString
-    End Sub
-
-    Private Sub HDL_DumpWorker_RunWorkerCompleted(sender As Object, e As RunWorkerCompletedEventArgs) Handles HDL_DumpWorker.RunWorkerCompleted
-        'Proceed to game partition
-        StatusLabel.Text = "Creating game PP partition ..."
-        CreateGamePartition()
-    End Sub
-
     Private Sub CreateGamePartition()
-
         Dim GameID As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(1).Split("="c)(1).Replace("_", "-").Replace(".", "").Trim()
         Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
         Dim CreatedGamePartition As String = ""
@@ -749,11 +719,9 @@ Class MainWindow
             MsgBox("There was an error in creating the game's PP partition, please check if the name doesn't already exists of if you have enough space.", MsgBoxStyle.Exclamation, "Error installing game")
             Exit Sub
         End If
-
     End Sub
 
     Private Sub CreateHomebrewPartition(PartitionName As String)
-
         Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
 
         'Set mkpart command
@@ -791,11 +759,9 @@ Class MainWindow
             MsgBox("There was an error in creating the homebrew's PP partition, please check if the name doesn't already exists of if you have enough space.", MsgBoxStyle.Exclamation, "Error installing homebrew")
             Exit Sub
         End If
-
     End Sub
 
     Public Sub ModifyPartitionHeader(PartitionName As String)
-
         Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
 
         'Create a copy of hdl_dump in the project directory
@@ -809,7 +775,7 @@ Class MainWindow
             HDLDump.StartInfo.Arguments = "modify_header " + MountedDrive.HDLDriveName + " " + PartitionName
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
-            HDLDump.StartInfo.CreateNoWindow = False
+            HDLDump.StartInfo.CreateNoWindow = True
             HDLDump.Start()
 
             Dim OutputReader As StreamReader = HDLDump.StandardOutput
@@ -906,6 +872,7 @@ Class MainWindow
 
         LockUI()
 
+        ProgressGrid.Visibility = Visibility.Hidden
         StatusLabel.Text = "Installed !"
         PreparedProjectsComboBox.SelectedItem = Nothing
 
@@ -916,13 +883,145 @@ Class MainWindow
         StatusLabel.Text = ""
     End Sub
 
-    Private Sub ShowPartitionsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles ShowPartitionsMenuItem.Click
+    Private Sub ShowPartitionsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles PartitionManagerMenuItem.Click
         If MountedDrive.HDLDriveName = "" Then
-            MsgBox("Please connect to the NBD server first.")
+            MsgBox("Please connect to the NBD server first.", MsgBoxStyle.Information)
         Else
             Dim NewPartitionManager As New PartitionManager() With {.ShowActivated = True}
             NewPartitionManager.Show()
         End If
+    End Sub
+
+    Public Sub HDLDumpOutputDataHandler(sender As Object, e As DataReceivedEventArgs)
+        If StatusLabel.CheckAccess() = False Then
+            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = e.Data)
+        Else
+            StatusLabel.Text = e.Data
+        End If
+
+        Dim ProgressPercentage As Double
+        If Not String.IsNullOrEmpty(Regex.Match(e.Data, "\d\d[%]+").Value) Then
+            If Double.TryParse(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""), ProgressPercentage) Then
+                Console.WriteLine(ProgressPercentage)
+                If StatusProgressBar.CheckAccess() = False Then
+                    StatusProgressBar.Dispatcher.BeginInvoke(Sub() StatusProgressBar.Value = ProgressPercentage)
+                Else
+                    StatusProgressBar.Value = ProgressPercentage
+                End If
+            Else
+                Console.WriteLine(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""))
+            End If
+        End If
+
+        If ProgressPercentage = 100 Then
+            HDL_Dump.CancelOutputRead()
+        End If
+    End Sub
+
+    Public Sub ErrorDataHandler(sender As Object, e As DataReceivedEventArgs)
+        If Not String.IsNullOrEmpty(e.Data) Then
+            'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
+            If e.Data.Contains("libwnbd.dll!WnbdIoctlCreate") Then
+                MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.", MsgBoxStyle.Exclamation)
+                Exit Sub
+            ElseIf e.Data.Contains("the option '--hostname' is required but missing") Then
+                MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
+                Exit Sub
+            ElseIf e.Data.Contains("INFO Successfully connected to NBD server") Then
+                MountedDrive.DriveID = GetHDDID()
+                MountedDrive.HDLDriveName = GetHDLDriveName()
+
+                If InstallButton.CheckAccess() = False Then
+                    InstallButton.Dispatcher.BeginInvoke(Sub() InstallButton.IsEnabled = True)
+                Else
+                    InstallButton.IsEnabled = True
+                End If
+
+                If NBDConnectionLabel.CheckAccess() = False Then
+                    NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
+                                                                  NBDConnectionLabel.Text = "Connected"
+                                                                  NBDConnectionLabel.Foreground = Brushes.Green
+                                                              End Sub)
+                Else
+                    NBDConnectionLabel.Text = "Connected"
+                    NBDConnectionLabel.Foreground = Brushes.Green
+                End If
+
+                If ConnectButton.CheckAccess() = False Then
+                    ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
+                Else
+                    ConnectButton.Content = "Disconnect"
+                End If
+
+                MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
+            End If
+        End If
+    End Sub
+
+    Private Sub ProjectsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles ProjectsMenuItem.Click
+
+        'Switch to the ProjectsGrid
+
+        StartMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        ProjectsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF004671"), Color))
+        PartitionManagerMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        XMBToolsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        NBDDriverMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+
+        Dim ProjectsGridAnimation As New DoubleAnimation With {.From = 0, .To = 1, .Duration = New Duration(TimeSpan.FromMilliseconds(300))}
+        Dim StartGridAnimation As New DoubleAnimation With {.From = 1, .To = 0, .Duration = New Duration(TimeSpan.FromMilliseconds(300))}
+
+        ProjectsGrid.Visibility = Visibility.Visible
+
+        StartGrid.BeginAnimation(OpacityProperty, StartGridAnimation)
+        ProjectsGrid.BeginAnimation(OpacityProperty, ProjectsGridAnimation)
+
+        StartGrid.Visibility = Visibility.Hidden
+
+    End Sub
+
+    Private Sub StartMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles StartMenuItem.Click
+
+        'Switch to the StartGrid
+
+        StartMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF004671"), Color))
+        ProjectsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        PartitionManagerMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        XMBToolsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        NBDDriverMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+
+        Dim ProjectsGridAnimation As New DoubleAnimation With {.From = 1, .To = 0, .Duration = New Duration(TimeSpan.FromMilliseconds(300))}
+        Dim StartGridAnimation As New DoubleAnimation With {.From = 0, .To = 1, .Duration = New Duration(TimeSpan.FromMilliseconds(300))}
+
+        StartGrid.Visibility = Visibility.Visible
+
+        ProjectsGrid.BeginAnimation(OpacityProperty, ProjectsGridAnimation)
+        StartGrid.BeginAnimation(OpacityProperty, StartGridAnimation)
+
+        ProjectsGrid.Visibility = Visibility.Hidden
+
+    End Sub
+
+    Private Sub GameLibraryMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles GameLibraryMenuItem.Click
+        Dim NewGameLibrary As New GameLibrary() With {.ShowActivated = True}
+        NewGameLibrary.Show()
+    End Sub
+
+    Private Sub HDL_Dump_Exited(sender As Object, e As EventArgs) Handles HDL_Dump.Exited
+        'Proceed to game partition
+        If StatusLabel.CheckAccess() = False Then
+            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Creating game PP partition ...")
+        Else
+            StatusLabel.Text = "Creating game PP partition ..."
+        End If
+
+        CreateGamePartition()
+    End Sub
+
+    Private Sub XMBToolsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles XMBToolsMenuItem.Click
+        MsgBox("XMB Tools are not available yet in this release.", MsgBoxStyle.Information)
     End Sub
 
 End Class

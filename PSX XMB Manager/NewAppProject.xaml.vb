@@ -26,7 +26,7 @@ Public Class NewAppProject
         End If
     End Sub
 
-    Private Sub AdvancedSettingsButton_Click(sender As Object, e As RoutedEventArgs) Handles AdvancedSettingsButton.Click
+    Private Sub AdvancedSettingsButton_Click(sender As Object, e As RoutedEventArgs) Handles EditResourcesButton.Click
         Dim NewAppEditor As New AppEditor() With {.ProjectDirectory = ProjectDirectoryTextBox.Text, .Title = "Homebrew Ressources Editor - " + ProjectDirectoryTextBox.Text}
 
         If Directory.Exists(ProjectDirectoryTextBox.Text) AndAlso Directory.Exists(ProjectDirectoryTextBox.Text + "\res") Then

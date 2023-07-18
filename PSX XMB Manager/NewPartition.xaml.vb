@@ -8,7 +8,7 @@ Public Class NewPartition
 
             'Set mkpart command
             Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\tools\cmdlist\mkpart.txt", False)
-                CommandFileWriter.WriteLine("device " + MainWindow.MountedDrive.DriveID)
+                CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
                 CommandFileWriter.WriteLine("mkpart " + NewPartitionNameTextBox.Text + " " + NewPartitionSizeTextBox.Text + "M PFS")
                 CommandFileWriter.WriteLine("exit")
             End Using

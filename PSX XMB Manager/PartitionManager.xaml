@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PSX_XMB_Manager"
         mc:Ignorable="d"
-        Title="Partition Manager" Height="601" Width="900" ResizeMode="CanMinimize">
+        Title="Partition Manager" Height="601" Width="900" ResizeMode="CanMinimize" Background="#FF252525">
     <Grid>
         <ListView x:Name="PartitionsListView" Margin="10,87,10,0" Height="166" VerticalAlignment="Top">
             <ListView.View>
@@ -18,7 +18,6 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <Button x:Name="LoadPartitionsButton" Content="Load partitions" HorizontalAlignment="Left" Margin="10,22,0,0" VerticalAlignment="Top" Width="100" />
         <ListView x:Name="GamesPartitionsListView" Margin="10,284,10,0" Height="251" VerticalAlignment="Top">
             <ListView.View>
                 <GridView>
@@ -31,12 +30,13 @@
                 </GridView>
             </ListView.View>
         </ListView>
-        <TextBlock HorizontalAlignment="Left" Margin="10,258,0,0" TextWrapping="Wrap" Text="Installed Games on HDD :" VerticalAlignment="Top" FontSize="16"/>
-        <TextBlock HorizontalAlignment="Left" Margin="10,61,0,0" TextWrapping="Wrap" Text="Partition List :" VerticalAlignment="Top" FontSize="16"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,258,0,0" TextWrapping="Wrap" Text="Installed Games on HDD :" VerticalAlignment="Top" FontSize="16" Foreground="White"/>
+        <TextBlock HorizontalAlignment="Left" Margin="10,61,0,0" TextWrapping="Wrap" Text="Partition List :" VerticalAlignment="Top" FontSize="16" Foreground="White"/>
         <Menu Height="20" VerticalAlignment="Bottom">
             <TextBlock x:Name="HDDSpaceTextBlock" Text="HDD Space :"/>
         </Menu>
-        <Button x:Name="CreateNewPartitionButton" Content="Create a new partition" HorizontalAlignment="Left" Margin="115,22,0,0" VerticalAlignment="Top" Width="150" />
+        <Button x:Name="LoadPartitionsButton" Content="Load partitions" HorizontalAlignment="Left" Margin="10,20,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="125" Height="24" FontFamily="Calibri" FontSize="14"/>
+        <Button x:Name="CreateNewPartitionButton" Content="Create a new partition" HorizontalAlignment="Left" Margin="149,20,0,0" VerticalAlignment="Top" Background="#FF00619C" Foreground="White" BorderBrush="{x:Null}" Width="150" Height="24" FontFamily="Calibri" FontSize="14"/>
 
     </Grid>
 </Window>

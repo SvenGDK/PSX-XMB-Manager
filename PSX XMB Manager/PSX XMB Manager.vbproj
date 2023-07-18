@@ -88,17 +88,30 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="GameLibrary.xaml.vb">
+      <DependentUpon>GameLibrary.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="GamePartitionManager.xaml.vb">
+      <DependentUpon>GamePartitionManager.xaml</DependentUpon>
+    </Compile>
     <Compile Include="NewAppProject.xaml.vb">
       <DependentUpon>NewAppProject.xaml</DependentUpon>
     </Compile>
     <Compile Include="NewGameProject.xaml.vb">
       <DependentUpon>NewGameProject.xaml</DependentUpon>
     </Compile>
+    <Compile Include="NewMainWindow.xaml.vb">
+      <DependentUpon>NewMainWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="NewPartition.xaml.vb">
       <DependentUpon>NewPartition.xaml</DependentUpon>
     </Compile>
     <Compile Include="PartitionManager.xaml.vb">
       <DependentUpon>PartitionManager.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="PS2Game.vb" />
+    <Compile Include="SyncWindow.xaml.vb">
+      <DependentUpon>SyncWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils.vb" />
     <Page Include="AppEditor.xaml">
@@ -109,9 +122,13 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MainWindow.xaml">
-      <Generator>MSBuild:Compile</Generator>
+    <Page Include="GameLibrary.xaml">
       <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="GamePartitionManager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
     <Compile Include="AppEditor.xaml.vb">
       <DependentUpon>AppEditor.xaml</DependentUpon>
@@ -123,15 +140,15 @@
     <Compile Include="GameEditor.xaml.vb">
       <DependentUpon>GameEditor.xaml</DependentUpon>
     </Compile>
-    <Compile Include="MainWindow.xaml.vb">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-      <SubType>Code</SubType>
-    </Compile>
     <Page Include="NewAppProject.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="NewGameProject.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="NewMainWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -142,6 +159,10 @@
     <Page Include="PartitionManager.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SyncWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -200,7 +221,16 @@
     <Resource Include="icon.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="blankcover.png" />
+    <Resource Include="Images\blankcover.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\eu.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\jp.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\us.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
 </Project>

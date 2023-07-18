@@ -1,7 +1,4 @@
 ﻿Imports System.IO
-Imports System.Net
-Imports System.Net.Configuration
-Imports System.Text.RegularExpressions
 
 Public Class PartitionManager
 
@@ -131,16 +128,8 @@ Public Class PartitionManager
                 _Name = Value
             End Set
         End Property
-    End Structure
 
-    Private Shared Function GetIntOnly(Value As String) As Integer
-        Dim ReturnValue As String = String.Empty
-        Dim MatchCol As MatchCollection = Regex.Matches(Value, "\d+")
-        For Each m As Match In MatchCol
-            ReturnValue += m.ToString()
-        Next
-        Return Convert.ToInt32(ReturnValue)
-    End Function
+    End Structure
 
     Private Sub LoadParititons()
         PartitionsListView.Items.Clear()
@@ -148,7 +137,7 @@ Public Class PartitionManager
 
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "toc " + MainWindow.MountedDrive.HDLDriveName
+            HDLDump.StartInfo.Arguments = "toc " + NewMainWindow.MountedDrive.HDLDriveName
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
@@ -170,9 +159,9 @@ Public Class PartitionManager
                 PartitionsListView.Items.Add(Part)
             ElseIf HDDPartition.StartsWith("Total") Then
                 Dim HDDSizes As String() = HDDPartition.Split({","}, StringSplitOptions.RemoveEmptyEntries)
-                Dim TotalSpaceInGB = GetIntOnly(HDDSizes(0)) / 1024
-                Dim UsedSpaceInGB = GetIntOnly(HDDSizes(1)) / 1024
-                Dim AvailableSpaceInGB = GetIntOnly(HDDSizes(2)) / 1024
+                Dim TotalSpaceInGB = Utils.GetIntOnly(HDDSizes(0)) / 1024
+                Dim UsedSpaceInGB = Utils.GetIntOnly(HDDSizes(1)) / 1024
+                Dim AvailableSpaceInGB = Utils.GetIntOnly(HDDSizes(2)) / 1024
 
                 HDDSpaceTextBlock.Text = "Total Space : " + FormatNumber(TotalSpaceInGB, 2) + " GB - Used : " + FormatNumber(UsedSpaceInGB, 2) + " GB - Available : " + FormatNumber(AvailableSpaceInGB, 2) + " GB"
 
@@ -186,7 +175,7 @@ Public Class PartitionManager
 
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "hdl_toc " + MainWindow.MountedDrive.HDLDriveName
+            HDLDump.StartInfo.Arguments = "hdl_toc " + NewMainWindow.MountedDrive.HDLDriveName
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
@@ -245,7 +234,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + MainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ """ + NewGameTitle + """"
+                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ """ + NewGameTitle + """"
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -273,7 +262,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + MainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
+                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -300,7 +289,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + MainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
+                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -326,7 +315,7 @@ Public Class PartitionManager
 
                     Using HDLDump As New Process()
                         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                        HDLDump.StartInfo.Arguments = "modify " + MainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -unhide"
+                        HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -unhide"
                         HDLDump.StartInfo.RedirectStandardError = True
                         HDLDump.StartInfo.UseShellExecute = False
                         HDLDump.StartInfo.CreateNoWindow = True
@@ -350,7 +339,7 @@ Public Class PartitionManager
 
                     Using HDLDump As New Process()
                         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                        HDLDump.StartInfo.Arguments = "modify " + MainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -hide"
+                        HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -hide"
                         HDLDump.StartInfo.RedirectStandardError = True
                         HDLDump.StartInfo.UseShellExecute = False
                         HDLDump.StartInfo.CreateNoWindow = True
@@ -388,12 +377,12 @@ Public Class PartitionManager
 
                 'Set rmpart command
                 Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\rmpart.txt", False)
-                    CommandFileWriter.WriteLine("device " + MainWindow.MountedDrive.DriveID)
+                    CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
                     CommandFileWriter.WriteLine("rmpart " + SelectedPartition.Name)
                     CommandFileWriter.WriteLine("exit")
                 End Using
 
-                'Proceed to partition creation
+                'Proceed to partition deletion
                 Dim PFSShellOutput As String
                 Using PFSShellProcess As New Process()
                     PFSShellProcess.StartInfo.FileName = "cmd"

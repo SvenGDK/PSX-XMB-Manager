@@ -6,7 +6,8 @@ Imports nQuant
 Public Class GameEditor
 
     Public ProjectDirectory As String
-    Private WithEvents PSXDatacenterBrowser As New WebBrowser()
+    Public WithEvents PSXDatacenterBrowser As New WebBrowser()
+    Public AutoSave As Boolean = False
 
     Private Sub LoadFromPSXButton_Click(sender As Object, e As RoutedEventArgs) Handles LoadFromPSXButton.Click
         Try
@@ -29,16 +30,16 @@ Public Class GameEditor
 
         'Save selected XMB cover as compressed PNG
         'Skips now already saved art
-        If Not String.IsNullOrEmpty(CoverPictureBox.Tag.ToString) And Not CoverPictureBox.Tag.ToString = ProjectDirectory + "\res\jkt_001.png" Then
-            Dim Cover1Bitmap As Bitmap = GetResizedBitmap(CoverPictureBox.Tag.ToString, 140, 200)
-            Dim Cover2Bitmap As Bitmap = GetResizedBitmap(CoverPictureBox.Tag.ToString, 74, 108)
+        If CoverPictureBox.Tag IsNot Nothing Then
+            Dim Cover1Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString, 140, 200)
+            Dim Cover2Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString, 74, 108)
 
-            If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
-            End If
-            If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
-            End If
+                If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                    Utils.ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
+                End If
+                If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                    Utils.ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
+                End If
 
             Try
                 Using CompressedImage = Quantizer.QuantizeImage(Cover1Bitmap)
@@ -48,17 +49,16 @@ Public Class GameEditor
                     CompressedImage.Save(ProjectDirectory + "\res\jkt_002.png", Imaging.ImageFormat.Png)
                 End Using
             Catch ex As Exception
-                MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
+                MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
             Finally
                 Cover1Bitmap.Dispose()
             End Try
         End If
 
-        If Not String.IsNullOrWhiteSpace(BackgroundImagePictureBox.Tag.ToString) And Not BackgroundImagePictureBox.Tag.ToString = ProjectDirectory + "\res\image\0.png" Then
-            Dim BackgroundImageBitmap As Bitmap = GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
-
+        If Not BackgroundImagePictureBox.Tag IsNot Nothing Then
+            Dim BackgroundImageBitmap As Bitmap = Utils.GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
             If BackgroundImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(BackgroundImageBitmap)
+                Utils.ConvertTo32bppAndDisposeOriginal(BackgroundImageBitmap)
             End If
 
             Try
@@ -66,17 +66,16 @@ Public Class GameEditor
                     CompressedImage.Save(ProjectDirectory + "\res\image\0.png", Imaging.ImageFormat.Png)
                 End Using
             Catch ex As Exception
-                MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
+                MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
             Finally
                 BackgroundImageBitmap.Dispose()
             End Try
         End If
 
-        If Not String.IsNullOrWhiteSpace(ScreenshotImage1PictureBox.Tag.ToString) And Not ScreenshotImage1PictureBox.Tag.ToString = ProjectDirectory + "\res\image\1.png" Then
-            Dim ScreenshotImageBitmap As Bitmap = GetResizedBitmap(ScreenshotImage1PictureBox.Tag.ToString, 640, 350)
-
+        If ScreenshotImage1PictureBox.Tag IsNot Nothing Then
+            Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage1PictureBox.Tag.ToString, 640, 350)
             If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
+                Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
             End If
 
             Try
@@ -84,16 +83,16 @@ Public Class GameEditor
                     CompressedImage.Save(ProjectDirectory + "\res\image\1.png", Imaging.ImageFormat.Png)
                 End Using
             Catch ex As Exception
-                MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
+                MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
             Finally
                 ScreenshotImageBitmap.Dispose()
             End Try
         End If
-        If Not String.IsNullOrWhiteSpace(ScreenshotImage2PictureBox.Tag.ToString) And Not ScreenshotImage2PictureBox.Tag.ToString = ProjectDirectory + "\res\image\2.png" Then
-            Dim ScreenshotImageBitmap As Bitmap = GetResizedBitmap(ScreenshotImage2PictureBox.Tag.ToString, 640, 350)
+        If ScreenshotImage2PictureBox.Tag IsNot Nothing Then
+            Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage2PictureBox.Tag.ToString, 640, 350)
 
             If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
+                Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
             End If
 
             Try
@@ -101,7 +100,7 @@ Public Class GameEditor
                     CompressedImage.Save(ProjectDirectory + "\res\image\2.png", Imaging.ImageFormat.Png)
                 End Using
             Catch ex As Exception
-                MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
+                MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
             Finally
                 ScreenshotImageBitmap.Dispose()
             End Try
@@ -274,31 +273,22 @@ Public Class GameEditor
                 ScreenshotImage2PictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(2).GetAttribute("src")
             End If
 
+            If AutoSave = True Then
+                SaveButton_Click(SaveButton, New RoutedEventArgs())
+            End If
+
         Catch ex As Exception
-            MsgBox(ex.ToString)
+            MsgBox(ex.Message)
         End Try
     End Sub
 
-    Private Function GetResizedBitmap(ImageLocation As String, NewWidth As Integer, NewHeight As Integer) As Bitmap
-        Dim Request As Net.WebRequest = Net.WebRequest.Create(ImageLocation)
-        Dim Response As Net.WebResponse = Request.GetResponse()
-        Dim ResponseStream As Stream = Response.GetResponseStream()
+    Private Sub CoverPictureBox_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs) Handles CoverPictureBox.MouseLeftButtonDown
+        Dim OFD As New Forms.OpenFileDialog() With {.Title = "Choose your .png file.", .Filter = "png files (*.png)|*.png"}
 
-        Dim OriginalBitmap As New Bitmap(ResponseStream)
-        Dim ResizedBitmap As New Bitmap(OriginalBitmap, New Size(NewWidth, NewHeight))
-
-        Return ResizedBitmap
-    End Function
-
-    Private Shared Sub ConvertTo32bppAndDisposeOriginal(ByRef img As Bitmap)
-        Dim bmp = New Bitmap(img.Width, img.Height, Imaging.PixelFormat.Format32bppArgb)
-
-        Using gr = Graphics.FromImage(bmp)
-            gr.DrawImage(img, New Rectangle(0, 0, 76, 108))
-        End Using
-
-        img.Dispose()
-        img = bmp
+        If OFD.ShowDialog() = Forms.DialogResult.OK Then
+            CoverPictureBox.Source = New BitmapImage(New Uri(OFD.FileName))
+            CoverPictureBox.Tag = OFD.FileName
+        End If
     End Sub
 
 End Class
