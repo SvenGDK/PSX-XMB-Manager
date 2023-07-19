@@ -12,11 +12,11 @@ Imports System.Windows
 ' Werte der Assemblyattribute überprüfen
 
 <Assembly: AssemblyTitle("PSX XMB Manager")>
-<Assembly: AssemblyDescription("")>
-<Assembly: AssemblyCompany("")>
+<Assembly: AssemblyDescription("Install and manage homebrew & games on the PSX DESR.")>
+<Assembly: AssemblyCompany("SvenGDK")>
 <Assembly: AssemblyProduct("PSX XMB Manager")>
 <Assembly: AssemblyCopyright("Copyright © SvenGDK 2022-2023")>
-<Assembly: AssemblyTrademark("")>
+<Assembly: AssemblyTrademark("SvenGDK")>
 <Assembly: ComVisible(false)>
 
 'Um mit dem Erstellen lokalisierbarer Anwendungen zu beginnen, legen Sie
@@ -55,5 +55,5 @@ Imports System.Windows
 ' indem Sie "*" wie unten gezeigt eingeben:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("2.0.0.0")>
-<Assembly: AssemblyFileVersion("2.0.0.0")>
+<Assembly: AssemblyVersion("2.1.0.0")>
+<Assembly: AssemblyFileVersion("2.1.0.0")>

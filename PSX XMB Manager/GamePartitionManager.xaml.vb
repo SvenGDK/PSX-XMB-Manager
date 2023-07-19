@@ -12,7 +12,7 @@ Public Class GamePartitionManager
 
     Private TextboxChangesDictionary As New Dictionary(Of TextBox, String)
     Private CheckboxChangesDictionary As New Dictionary(Of CheckBox, Boolean?)
-    Private ImageChangesDictionary As New Dictionary(Of Image, Image)
+    Private ImageChangesDictionary As New Dictionary(Of Image, ImageSource)
 
     Dim WithEvents PSXDatacenterBrowser As New WebBrowser()
     Dim WithEvents NewLoadingWindow As New SyncWindow() With {.Title = "Loading files", .ShowActivated = True, .WindowStartupLocation = WindowStartupLocation.CenterScreen}
@@ -67,25 +67,6 @@ Public Class GamePartitionManager
                                                    End Sub)
         End If
 
-        'If File.Exists(ResPath + "\image\0.png") Then
-        '    BackgroundImagePictureBox.Dispatcher.BeginInvoke(Sub()
-        '                                                         BackgroundImagePictureBox.Source = New BitmapImage(New Uri(ResPath + "\image\0.png"))
-        '                                                         BackgroundImagePictureBox.Tag = ResPath + "\image\0.png"
-        '                                                     End Sub)
-        'End If
-        'If File.Exists(ResPath + "\image\1.png") Then
-        '    ScreenshotImage1PictureBox.Dispatcher.BeginInvoke(Sub()
-        '                                                          ScreenshotImage1PictureBox.Source = New BitmapImage(New Uri(ResPath + "\image\1.png"))
-        '                                                          ScreenshotImage1PictureBox.Tag = ResPath + "\image\1.png"
-        '                                                      End Sub)
-        'End If
-        'If File.Exists(ResPath + "\image\2.png") Then
-        '    ScreenshotImage2PictureBox.Dispatcher.BeginInvoke(Sub()
-        '                                                          ScreenshotImage2PictureBox.Source = New BitmapImage(New Uri(ResPath + "\image\2.png"))
-        '                                                          ScreenshotImage2PictureBox.Tag = ResPath + "\image\2.png"
-        '                                                      End Sub)
-        'End If
-
         '\res\info.sys
         If File.Exists(ResPath + "\info.sys") Then
             Dim GameInfos As String() = File.ReadAllLines(ResPath + "\info.sys")
@@ -123,7 +104,7 @@ Public Class GamePartitionManager
         NewLoadingWindow.Close()
 
         For Each Img In GamePartitionManagerGrid.Children.OfType(Of Image)
-            ImageChangesDictionary.Add(Img, Img)
+            ImageChangesDictionary.Add(Img, Img.Source)
         Next
     End Sub
 
@@ -166,10 +147,10 @@ Public Class GamePartitionManager
         Dim Quantizer As New WuQuantizer()
         'Save selected cover and pictures as compressed PNG if modified
         For Each Img In GamePartitionManagerGrid.Children.OfType(Of Image)()
-            Dim oldValue = (From kp As KeyValuePair(Of Image, Image) In ImageChangesDictionary
+            Dim oldValue = (From kp As KeyValuePair(Of Image, ImageSource) In ImageChangesDictionary
                             Where kp.Key Is Img
                             Select kp.Value).First()
-            If oldValue.Tag IsNot Img.Tag Then
+            If oldValue IsNot Img.Source Then
                 If Img.Name = "CoverPictureBox" Then
                     If CoverPictureBox.Tag IsNot Nothing Then
                         Dim Cover1Bitmap As System.Drawing.Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString, 140, 200)
@@ -364,30 +345,36 @@ Public Class GamePartitionManager
             Using CommandFileWriter As New StreamWriter(AppDomain.CurrentDomain.BaseDirectory + "Tools\cmdlist\push.txt", False)
                 CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
                 CommandFileWriter.WriteLine("mount " + AssociatedPartition)
-                CommandFileWriter.WriteLine("mkdir res")
+                CommandFileWriter.WriteLine("mkdir res") 'continues if it already exists - useful if not present yet
                 CommandFileWriter.WriteLine("cd res")
 
                 If File.Exists("res\info.sys") Then
+                    CommandFileWriter.WriteLine("rm info.sys")
                     CommandFileWriter.WriteLine("put res\info.sys")
                     CommandFileWriter.WriteLine("rename res\info.sys info.sys")
                 End If
                 If File.Exists("res\jkt_001.png") Then
+                    CommandFileWriter.WriteLine("rm jkt_001.png")
                     CommandFileWriter.WriteLine("put res\jkt_001.png")
                     CommandFileWriter.WriteLine("rename res\jkt_001.png jkt_001.png")
                 End If
                 If File.Exists("res\jkt_002.png") Then
+                    CommandFileWriter.WriteLine("rm jkt_002.png")
                     CommandFileWriter.WriteLine("put res\jkt_002.png")
                     CommandFileWriter.WriteLine("rename res\jkt_002.png jkt_002.png")
                 End If
                 If File.Exists("res\jkt_cp.png") Then
+                    CommandFileWriter.WriteLine("rm jkt_cp.png")
                     CommandFileWriter.WriteLine("put res\jkt_cp.png")
                     CommandFileWriter.WriteLine("rename res\jkt_cp.png jkt_cp.png")
                 End If
                 If File.Exists("res\man.xml") Then
+                    CommandFileWriter.WriteLine("rm man.xml")
                     CommandFileWriter.WriteLine("put res\man.xml")
                     CommandFileWriter.WriteLine("rename res\man.xml man.xml")
                 End If
                 If File.Exists("res\notice.jpg") Then
+                    CommandFileWriter.WriteLine("rm notice.jpg")
                     CommandFileWriter.WriteLine("put res\notice.jpg")
                     CommandFileWriter.WriteLine("rename res\notice.jpg notice.jpg")
                 End If
@@ -397,14 +384,17 @@ Public Class GamePartitionManager
                     CommandFileWriter.WriteLine("cd image")
 
                     If File.Exists("res\image\0.png") Then
+                        CommandFileWriter.WriteLine("rm 0.png")
                         CommandFileWriter.WriteLine("put res\image\0.png")
                         CommandFileWriter.WriteLine("rename res\image\0.png 0.png")
                     End If
                     If File.Exists("res\image\1.png") Then
+                        CommandFileWriter.WriteLine("rm 1.png")
                         CommandFileWriter.WriteLine("put res\image\1.png")
                         CommandFileWriter.WriteLine("rename res\image\1.png 1.png")
                     End If
                     If File.Exists("res\image\2.png") Then
+                        CommandFileWriter.WriteLine("rm 2.png")
                         CommandFileWriter.WriteLine("put res\image\2.png")
                         CommandFileWriter.WriteLine("rename res\image\2.png 2.png")
                     End If
@@ -421,6 +411,7 @@ Public Class GamePartitionManager
                 PFSShellProcess.StartInfo.UseShellExecute = False
                 PFSShellProcess.StartInfo.CreateNoWindow = True
                 PFSShellProcess.Start()
+                PFSShellProcess.WaitForExit()
             End Using
         Else
             MsgBox("There was an error while modifying the partition, please check if you have enough space and report the next error.", MsgBoxStyle.Exclamation, "Error installing game")
