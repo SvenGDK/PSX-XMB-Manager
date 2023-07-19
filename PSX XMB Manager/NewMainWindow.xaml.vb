@@ -113,6 +113,7 @@ Public Class NewMainWindow
             WNBDClient.StartInfo.Arguments = "-v"
             WNBDClient.StartInfo.RedirectStandardOutput = True
             WNBDClient.StartInfo.UseShellExecute = False
+            WNBDClient.StartInfo.CreateNoWindow = True
             WNBDClient.Start()
 
             Dim OutputReader As StreamReader = WNBDClient.StandardOutput
@@ -152,6 +153,45 @@ Public Class NewMainWindow
                 NBDDriverVersionLabel.Foreground = Brushes.Red
             End If
         End Using
+
+        'Check if Dokan driver is installed
+        If Directory.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan") Then
+            Dim DokanLibraryFolder As String = ""
+            For Each Folder In Directory.GetDirectories(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan\")
+                Dim FolderInfo As New DirectoryInfo(Folder)
+                If FolderInfo.Name.StartsWith("DokanLibrary") Then
+                    DokanLibraryFolder = Folder
+                    Exit For
+                End If
+            Next
+            If Not String.IsNullOrEmpty(DokanLibraryFolder) Then
+                'Check if NBD driver is installed
+                Using DokanCTL As New Process()
+                    DokanCTL.StartInfo.FileName = DokanLibraryFolder + "\dokanctl.exe"
+                    DokanCTL.StartInfo.Arguments = "/v"
+                    DokanCTL.StartInfo.RedirectStandardOutput = True
+                    DokanCTL.StartInfo.UseShellExecute = False
+                    DokanCTL.StartInfo.CreateNoWindow = True
+                    DokanCTL.Start()
+
+                    Dim OutputReader As StreamReader = DokanCTL.StandardOutput
+                    Dim ProcessOutput As String = OutputReader.ReadToEnd()
+                    Dim SplittedOutput As String() = ProcessOutput.Split({vbCrLf}, StringSplitOptions.None)
+
+                    Dim DokanVersion As String = ""
+                    Dim DokanDriverVersion As String = ""
+
+                    If Not SplittedOutput(2).Trim() = "" Then
+                        DokanVersion = SplittedOutput(2).Trim().Split(":"c)(1).Trim()
+                        DokanDriverVersion = SplittedOutput(3).Trim().Split(":"c)(1).Trim()
+
+                        DokanDriverVersionLabel.Text = "Library: " + DokanVersion + " - Driver: " + DokanDriverVersion
+                        DokanDriverVersionLabel.Foreground = Brushes.Green
+                    End If
+                End Using
+            End If
+        End If
+
     End Sub
 
     Private Function IsNBDConnected() As Boolean
