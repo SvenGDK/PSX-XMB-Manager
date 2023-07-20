@@ -17,7 +17,7 @@ Public Class NewPartition
             Dim PFSShellOutput As String
             Using PFSShellProcess As New Process()
                 PFSShellProcess.StartInfo.FileName = "cmd"
-                PFSShellProcess.StartInfo.Arguments = """/c type """ + My.Computer.FileSystem.CurrentDirectory + "\tools\cmdlist\mkpart.txt"" | ""C:\Users\SvenGDK\source\repos\DESRApps\bin\Release\tools\pfsshell.exe"" 2>&1"
+                PFSShellProcess.StartInfo.Arguments = """/c type """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt"" | """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\pfsshell.exe"" 2>&1"
 
                 PFSShellProcess.StartInfo.RedirectStandardOutput = True
                 PFSShellProcess.StartInfo.UseShellExecute = False

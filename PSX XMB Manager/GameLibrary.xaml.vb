@@ -65,7 +65,7 @@ Public Class GameLibrary
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split(New String() {vbCrLf}, StringSplitOptions.None)
 
             For Each Line As String In ProcessOutput
-                If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Then
+                If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Or Line.Contains("SLPS_") Or Line.Contains("SCCS_") Or Line.Contains("SLPM_") Or Line.Contains("SLKA_") Then
                     If Line.Contains("Volume:") Then 'ID found in the ISO Header
                         GameID = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
                         Exit For
@@ -293,6 +293,7 @@ Public Class GameLibrary
 
     Private Sub LoadGamePartitions()
         'HDL TOC of the PSX HDD
+        HDLDump = New Process()
         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
         HDLDump.StartInfo.Arguments = "hdl_toc " + NewMainWindow.MountedDrive.HDLDriveName
         HDLDump.StartInfo.RedirectStandardOutput = True
@@ -305,6 +306,7 @@ Public Class GameLibrary
 
     Private Sub LoadPartitions()
         'TOC of the PSX HDD
+        HDLDump2 = New Process()
         HDLDump2.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
         HDLDump2.StartInfo.Arguments = "toc " + NewMainWindow.MountedDrive.HDLDriveName
         HDLDump2.StartInfo.RedirectStandardOutput = True
@@ -470,8 +472,35 @@ Public Class GameLibrary
             End If
 
             'Reload
-            NewLoadingWindow.Close()
-            LoadPSXGamesButton_Click(LoadPSXGamesButton, New RoutedEventArgs())
+            URLs.Clear()
+            GamePartitions.Clear()
+            HDLDump2.CancelOutputRead()
+
+            If GamesListView.Dispatcher.CheckAccess() = False Then
+                GamesListView.Dispatcher.BeginInvoke(Sub()
+                                                         GamesListView.Items.Clear()
+                                                     End Sub)
+            Else
+                GamesListView.Items.Clear()
+            End If
+
+            If NewLoadingWindow.Dispatcher.CheckAccess() = False Then
+                NewLoadingWindow.Dispatcher.BeginInvoke(Sub()
+                                                            NewLoadingWindow.Close()
+                                                            NewLoadingWindow = New SyncWindow() With {.Title = "Loading games on PSX HDD", .ShowActivated = True, .WindowStartupLocation = WindowStartupLocation.CenterScreen}
+                                                            NewLoadingWindow.LoadProgressBar.IsIndeterminate = True
+                                                            NewLoadingWindow.LoadStatusTextBlock.Text = "Please wait"
+                                                            NewLoadingWindow.Show()
+                                                        End Sub)
+            Else
+                NewLoadingWindow.Close()
+                NewLoadingWindow = New SyncWindow() With {.Title = "Loading games on PSX HDD", .ShowActivated = True, .WindowStartupLocation = WindowStartupLocation.CenterScreen}
+                NewLoadingWindow.LoadProgressBar.IsIndeterminate = True
+                NewLoadingWindow.LoadStatusTextBlock.Text = "Please wait"
+                NewLoadingWindow.Show()
+            End If
+
+            LoadGamePartitions()
         End If
     End Sub
 
@@ -603,10 +632,13 @@ Public Class GameLibrary
 
     Public Sub OutputDataHandler(sender As Object, e As DataReceivedEventArgs)
         If Not String.IsNullOrEmpty(e.Data) Then
+
             If e.Data.StartsWith("DVD") Or e.Data.StartsWith("CD") Then 'Game found
                 Dim NewPS2Game As New PS2Game()
+
                 Dim GameSize = e.Data.Split({" "}, StringSplitOptions.RemoveEmptyEntries)(1).Trim().Replace("KB", "")
                 Dim GameSizeInMB = CInt(GameSize) / 1024
+
                 Dim GamePart As New GamePartition() With {.Type = e.Data.Split({" "}, StringSplitOptions.RemoveEmptyEntries)(0),
                     .Size = FormatNumber(GameSizeInMB, 2) + " MB",
                     .Flags = e.Data.Split({" "}, StringSplitOptions.RemoveEmptyEntries)(2),
@@ -630,14 +662,14 @@ Public Class GameLibrary
                     NewPS2Game.GameTitle = GetGameTitleFromDatabaseList(GameID)
                 End If
 
-                GamePartitionsCount += 1
-
                 'Add to the ListView
                 If GamesListView.Dispatcher.CheckAccess() = False Then
                     GamesListView.Dispatcher.BeginInvoke(Sub() GamesListView.Items.Add(NewPS2Game))
                 Else
                     GamesListView.Items.Add(NewPS2Game)
                 End If
+
+                GamePartitionsCount += 1
 
             ElseIf e.Data.StartsWith("total") Then 'Last line of hdl_dump hdl_toc - Load covers after getting the game list
                 Dim HDDSizes As String() = e.Data.Split({","}, StringSplitOptions.RemoveEmptyEntries)
@@ -664,6 +696,17 @@ Public Class GameLibrary
                                                NewLoadingWindow.Show()
                                            End Sub)
                 Else
+                    CurrentDirectoryTextBlock.Text = "PSX HDD" + " - Available: " + FormatNumber(AvailableSpaceInGB, 2) + " GB"
+
+                    'Left space indicator
+                    If AvailableSpaceInGB > 16 Then
+                        CurrentDirectoryTextBlock.Foreground = Brushes.Green
+                    ElseIf AvailableSpaceInGB >= 10 Then
+                        CurrentDirectoryTextBlock.Foreground = Brushes.Orange
+                    ElseIf AvailableSpaceInGB <= 9 Then
+                        CurrentDirectoryTextBlock.Foreground = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FFC12249"), Color))
+                    End If
+
                     TotalGamesTextBlock.Text = GamePartitionsCount.ToString() + " Games"
                     NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available infos with covers."
                     NewLoadingWindow.LoadProgressBar.IsIndeterminate = False
@@ -675,6 +718,7 @@ Public Class GameLibrary
                 HDLDump.CancelOutputRead()
                 GetGameCovers()
             End If
+
         End If
     End Sub
 

@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="AppEditor" Height="550" Width="600" ResizeMode="CanMinimize" Background="#FF252525">
     <Grid>
-        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="76,49,0,0" VerticalAlignment="Top" Width="140" Source="/blankcover.png"/>
+        <Image x:Name="CoverPictureBox" HorizontalAlignment="Left" Height="200" Margin="76,49,0,0" VerticalAlignment="Top" Width="140" Source="/Images/blankcover.png"/>
         <TextBlock HorizontalAlignment="Left" Margin="300,10,0,0" TextWrapping="Wrap" Text="Release Date :" VerticalAlignment="Top" Width="265" Foreground="White"/>
         <TextBox x:Name="HomebrewReleaseDateTextBox" HorizontalAlignment="Left" Margin="300,31,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="265" Height="40"/>
         <TextBlock HorizontalAlignment="Left" Margin="300,76,0,0" TextWrapping="Wrap" Text="Developer :" VerticalAlignment="Top" Width="265" Foreground="White"/>

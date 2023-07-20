@@ -55,7 +55,7 @@ Public Class GameEditor
             End Try
         End If
 
-        If Not BackgroundImagePictureBox.Tag IsNot Nothing Then
+        If BackgroundImagePictureBox.Tag IsNot Nothing Then
             Dim BackgroundImageBitmap As Bitmap = Utils.GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
             If BackgroundImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
                 Utils.ConvertTo32bppAndDisposeOriginal(BackgroundImageBitmap)
@@ -252,23 +252,19 @@ Public Class GameEditor
             End If
 
             'Get the game cover
-            If Not String.IsNullOrWhiteSpace(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")) Then
+            If PSXDatacenterBrowser.Document.GetElementById("table2") IsNot Nothing Then
                 CoverPictureBox.Source = New BitmapImage(New Uri(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")))
                 CoverPictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")
             End If
 
-            'Get a background image (currently a screenshot too)
-            If Not String.IsNullOrWhiteSpace(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(0).GetAttribute("src")) Then
+            'Get some images
+            If PSXDatacenterBrowser.Document.GetElementById("table22") IsNot Nothing Then
                 BackgroundImagePictureBox.Source = New BitmapImage(New Uri(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(0).GetAttribute("src")))
                 BackgroundImagePictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(0).GetAttribute("src")
-            End If
 
-            'Get some screenshots
-            If Not String.IsNullOrWhiteSpace(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(1).GetAttribute("src")) Then
                 ScreenshotImage1PictureBox.Source = New BitmapImage(New Uri(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(1).GetAttribute("src")))
                 ScreenshotImage1PictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(1).GetAttribute("src")
-            End If
-            If Not String.IsNullOrWhiteSpace(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(2).GetAttribute("src")) Then
+
                 ScreenshotImage2PictureBox.Source = New BitmapImage(New Uri(PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(2).GetAttribute("src")))
                 ScreenshotImage2PictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(2).GetAttribute("src")
             End If

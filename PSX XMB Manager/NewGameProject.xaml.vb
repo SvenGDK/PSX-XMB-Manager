@@ -30,7 +30,7 @@ Public Class NewGameProject
                         Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split(New String() {vbCrLf}, StringSplitOptions.None)
 
                         For Each Line As String In ProcessOutput
-                            If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Then
+                            If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Or Line.Contains("SLPS_") Or Line.Contains("SCCS_") Or Line.Contains("SLPM_") Or Line.Contains("SLKA_") Then
                                 If Line.Contains("Volume:") Then 'ID found in the ISO Header
                                     ProjectIDTextBox.Text = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
                                     Exit For

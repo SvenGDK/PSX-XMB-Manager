@@ -1,4 +1,5 @@
-﻿Imports System.IO
+﻿Imports System.ComponentModel
+Imports System.IO
 Imports System.Net
 Imports System.Text.RegularExpressions
 Imports System.Windows.Media.Animation
@@ -6,7 +7,11 @@ Imports System.Windows.Media.Animation
 Public Class NewMainWindow
 
     Dim WithEvents HDL_Dump As New Process()
+    Dim WithEvents WNBDConnectClient As New Process()
+
     Public Shared MountedDrive As MountedPSXDrive
+    Dim HDLGameID As String = ""
+    Dim CurrentProjectDirectory As String = ""
 
     'Public WithEvents HDL_DumpWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
     Dim WithEvents ContentDownloader As New WebClient()
@@ -363,6 +368,8 @@ Public Class NewMainWindow
     End Function
 
     Private Function GetHDDID() As String
+        Dim DriveID As String = ""
+
         'Query the drives
         Using WMIC As New Process()
             WMIC.StartInfo.FileName = "wmic"
@@ -380,12 +387,14 @@ Public Class NewMainWindow
             For Each Line As String In ProcessOutput
                 If Not String.IsNullOrWhiteSpace(Line) Then
                     If Line.Contains("WNBD WNBD_DISK SCSI Disk Device") Then
-                        Return Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(5).Trim()
+                        DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(5).Trim()
                     ElseIf Line.Contains("Microsoft Virtual Disk") Then 'For testing with local VHD
-                        Return Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(3).Trim()
+                        DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(3).Trim()
                     End If
                 End If
             Next
+
+            Return DriveID
         End Using
     End Function
 
@@ -542,23 +551,23 @@ Public Class NewMainWindow
     Private Sub ConnectButton_Click(sender As Object, e As RoutedEventArgs) Handles ConnectButton.Click
         If ConnectButton.Content.ToString = "Connect" Then
 
-            Using WNBDClient As New Process()
+            WNBDConnectClient = New Process()
 
-                If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
-                    WNBDClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
-                Else
-                    WNBDClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
-                End If
+            If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
 
-                WNBDClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
-                WNBDClient.StartInfo.RedirectStandardError = True
-                AddHandler WNBDClient.ErrorDataReceived, AddressOf ErrorDataHandler
-                WNBDClient.StartInfo.UseShellExecute = False
-                WNBDClient.StartInfo.CreateNoWindow = True
+                WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+            Else
+                WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+            End If
 
-                WNBDClient.Start()
-                WNBDClient.BeginErrorReadLine()
-            End Using
+            WNBDConnectClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
+            WNBDConnectClient.StartInfo.RedirectStandardError = True
+            AddHandler WNBDConnectClient.ErrorDataReceived, AddressOf ErrorDataHandler
+            WNBDConnectClient.StartInfo.UseShellExecute = False
+            WNBDConnectClient.StartInfo.CreateNoWindow = True
+
+            WNBDConnectClient.Start()
+            WNBDConnectClient.BeginErrorReadLine()
 
         ElseIf ConnectButton.Content.ToString = "Disconnect" Then
 
@@ -590,9 +599,11 @@ Public Class NewMainWindow
 
             Dim ProjectTitle As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(0).Split("="c)(1)
             If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
+
                 'Identify project type
                 Dim ProjectType As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(4).Split("="c)(1)
 
+                'Show progress
                 ProgressGrid.Visibility = Visibility.Visible
 
                 If ProjectType = "APP" Then
@@ -642,6 +653,8 @@ Public Class NewMainWindow
                 HomebrewPartition = "PP.APPS-00003..HDL"
             ElseIf HomebrewTitle.Contains("SMS") Or HomebrewTitle.Contains("Simple Media System") Then
                 HomebrewPartition = "PP.APPS-00004..SMS"
+            ElseIf HomebrewTitle.Contains("GSM") Then
+                HomebrewPartition = "PP.APPS-00005..GSM"
             Else
                 HomebrewPartition = InputBox("Please enter a valid partition name:", "Could not determine partition for this homebrew.", "PP.APPS-00001..TITLE")
             End If
@@ -671,6 +684,10 @@ Public Class NewMainWindow
             Dim GameID As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(1).Split("="c)(1)
             Dim GameISO As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(3).Split("="c)(1)
 
+            HDLGameID = File.ReadAllLines(PreparedProjectsComboBox.Text)(1).Split("="c)(1).Replace("_", "-").Replace(".", "").Trim()
+            CurrentProjectDirectory = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
+
+            HDL_Dump = New Process()
             HDL_Dump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
             HDL_Dump.StartInfo.RedirectStandardOutput = True
             AddHandler HDL_Dump.OutputDataReceived, AddressOf HDLDumpOutputDataHandler
@@ -696,9 +713,11 @@ Public Class NewMainWindow
     End Sub
 
     Private Sub CreateGamePartition()
-        Dim GameID As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(1).Split("="c)(1).Replace("_", "-").Replace(".", "").Trim()
-        Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
+
         Dim CreatedGamePartition As String = ""
+
+        Console.WriteLine(HDLGameID)
+        Console.WriteLine(MountedDrive.DriveID)
 
         'Get the created partition
         Dim QueryOutput As String()
@@ -715,12 +734,15 @@ Public Class NewMainWindow
         End Using
 
         For Each HDDPartition As String In QueryOutput
-            On Error Resume Next 'Supress the Index Out Of Range error if it returns no valid partition
-            HDDPartition = HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4)
-
-            If HDDPartition.Trim().StartsWith("__." + GameID) Then 'The created hidden partition
-                CreatedGamePartition = HDDPartition.Trim()
-                Exit For
+            If Not String.IsNullOrEmpty(HDDPartition) Then
+                If HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries).Count >= 3 Then
+                    HDDPartition = HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4)
+                    If HDDPartition.Trim().StartsWith("__." + HDLGameID) Then 'The created hidden partition
+                        Console.WriteLine(HDDPartition.Trim())
+                        CreatedGamePartition = HDDPartition.Trim()
+                        Exit For
+                    End If
+                End If
             End If
         Next
 
@@ -751,12 +773,32 @@ Public Class NewMainWindow
         End Using
 
         If PFSShellOutput.Contains("Main partition of 128M created.") Then
-            StatusLabel.Text = "Partition created, modifying header..."
+
+            If StatusLabel.Dispatcher.CheckAccess() = False Then
+                StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Partition created, modifying header...")
+            Else
+                StatusLabel.Text = "Partition created, modifying header..."
+            End If
 
             'Modify the created partition
             ModifyPartitionHeader(CreatedGamePartition.Replace("__", "PP"))
         Else
             MsgBox("There was an error in creating the game's PP partition, please check if the name doesn't already exists of if you have enough space.", MsgBoxStyle.Exclamation, "Error installing game")
+
+            If Dispatcher.CheckAccess() = False Then
+                Dispatcher.BeginInvoke(Sub()
+                                           LockUI()
+                                           StatusLabel.Text = ""
+                                           ProgressGrid.Visibility = Visibility.Hidden
+                                           PreparedProjectsComboBox.SelectedItem = Nothing
+                                       End Sub)
+            Else
+                LockUI()
+                StatusLabel.Text = ""
+                ProgressGrid.Visibility = Visibility.Hidden
+                PreparedProjectsComboBox.SelectedItem = Nothing
+            End If
+
             Exit Sub
         End If
     End Sub
@@ -779,7 +821,6 @@ Public Class NewMainWindow
 
             PFSShellProcess.StartInfo.RedirectStandardOutput = True
             PFSShellProcess.StartInfo.UseShellExecute = False
-            PFSShellProcess.StartInfo.CreateNoWindow = True
 
             PFSShellProcess.Start()
 
@@ -801,14 +842,12 @@ Public Class NewMainWindow
         End If
     End Sub
 
-    Public Sub ModifyPartitionHeader(PartitionName As String)
-        Dim ProjectDirectory As String = File.ReadAllLines(PreparedProjectsComboBox.Text)(2).Split("="c)(1)
-
+    Private Sub ModifyPartitionHeader(PartitionName As String)
         'Create a copy of hdl_dump in the project directory
-        File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe", ProjectDirectory + "\hdl_dump.exe", True)
+        File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe", CurrentProjectDirectory + "\hdl_dump.exe", True)
 
         'Switch to project directory and inject the files
-        Directory.SetCurrentDirectory(ProjectDirectory)
+        Directory.SetCurrentDirectory(CurrentProjectDirectory)
 
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = "hdl_dump.exe"
@@ -822,7 +861,13 @@ Public Class NewMainWindow
             Dim output = HDLDump.StandardOutput.ReadToEnd()
 
             If Not output.Contains("partition not found:") Then
-                StatusLabel.Text = "Partition header modified, adding files..."
+
+                If StatusLabel.Dispatcher.CheckAccess() = False Then
+                    StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Partition header modified, adding files...")
+                Else
+                    StatusLabel.Text = "Partition header modified, adding files..."
+                End If
+
                 AddFilesToPartition(PartitionName)
             Else
                 MsgBox("There was an error while modifying the partition, please check if you have enough space and report the next error.", MsgBoxStyle.Exclamation, "Error installing game")
@@ -910,17 +955,24 @@ Public Class NewMainWindow
             PFSShellOutput = ProcessOutput
         End Using
 
-        LockUI()
-
-        ProgressGrid.Visibility = Visibility.Hidden
-        StatusLabel.Text = "Installed !"
-        PreparedProjectsComboBox.SelectedItem = Nothing
+        If Dispatcher.CheckAccess() = False Then
+            Dispatcher.BeginInvoke(Sub()
+                                       LockUI()
+                                       StatusLabel.Text = ""
+                                       ProgressGrid.Visibility = Visibility.Hidden
+                                       PreparedProjectsComboBox.SelectedItem = Nothing
+                                   End Sub)
+        Else
+            LockUI()
+            StatusLabel.Text = ""
+            ProgressGrid.Visibility = Visibility.Hidden
+            PreparedProjectsComboBox.SelectedItem = Nothing
+        End If
 
         'Set the current directory back
         Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory)
 
         MsgBox("Installation complete !", MsgBoxStyle.Information)
-        StatusLabel.Text = ""
     End Sub
 
     Private Sub ShowPartitionsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles PartitionManagerMenuItem.Click
@@ -933,38 +985,53 @@ Public Class NewMainWindow
     End Sub
 
     Public Sub HDLDumpOutputDataHandler(sender As Object, e As DataReceivedEventArgs)
-        If StatusLabel.CheckAccess() = False Then
-            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = e.Data)
-        Else
-            StatusLabel.Text = e.Data
-        End If
+        If Not String.IsNullOrEmpty(e.Data) Then
 
-        Dim ProgressPercentage As Double
-        If Not String.IsNullOrEmpty(Regex.Match(e.Data, "\d\d[%]+").Value) Then
-            If Double.TryParse(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""), ProgressPercentage) Then
-                Console.WriteLine(ProgressPercentage)
-                If StatusProgressBar.CheckAccess() = False Then
-                    StatusProgressBar.Dispatcher.BeginInvoke(Sub() StatusProgressBar.Value = ProgressPercentage)
-                Else
-                    StatusProgressBar.Value = ProgressPercentage
-                End If
+            If StatusLabel.CheckAccess() = False Then
+                StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = e.Data)
             Else
-                Console.WriteLine(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""))
+                StatusLabel.Text = e.Data
             End If
+
+            Dim ProgressPercentage As Double = 0
+
+            If Regex.Match(e.Data, "\d\d[%]+").Success Then
+                If Double.TryParse(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""), ProgressPercentage) = True Then
+                    Console.WriteLine(ProgressPercentage)
+                    If StatusProgressBar.CheckAccess() = False Then
+                        StatusProgressBar.Dispatcher.BeginInvoke(Sub() StatusProgressBar.Value = ProgressPercentage)
+                    Else
+                        StatusProgressBar.Value = ProgressPercentage
+                    End If
+                End If
+            End If
+
+        End If
+    End Sub
+
+    Private Sub HDL_Dump_Exited(sender As Object, e As EventArgs) Handles HDL_Dump.Exited
+
+        HDL_Dump.CancelOutputRead()
+
+        'Proceed to game partition
+        If StatusLabel.CheckAccess() = False Then
+            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Creating game PP partition ...")
+        Else
+            StatusLabel.Text = "Creating game PP partition ..."
         End If
 
-        If ProgressPercentage = 100 Then
-            HDL_Dump.CancelOutputRead()
-        End If
+        CreateGamePartition()
     End Sub
 
     Public Sub ErrorDataHandler(sender As Object, e As DataReceivedEventArgs)
         If Not String.IsNullOrEmpty(e.Data) Then
             'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
             If e.Data.Contains("libwnbd.dll!WnbdIoctlCreate") Then
+                WNBDConnectClient.CancelErrorRead()
                 MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.", MsgBoxStyle.Exclamation)
                 Exit Sub
             ElseIf e.Data.Contains("the option '--hostname' is required but missing") Then
+                WNBDConnectClient.CancelErrorRead()
                 MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
                 Exit Sub
             ElseIf e.Data.Contains("INFO Successfully connected to NBD server") Then
@@ -993,6 +1060,7 @@ Public Class NewMainWindow
                     ConnectButton.Content = "Disconnect"
                 End If
 
+                WNBDConnectClient.CancelErrorRead()
                 MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
             End If
         End If
@@ -1049,19 +1117,12 @@ Public Class NewMainWindow
         NewGameLibrary.Show()
     End Sub
 
-    Private Sub HDL_Dump_Exited(sender As Object, e As EventArgs) Handles HDL_Dump.Exited
-        'Proceed to game partition
-        If StatusLabel.CheckAccess() = False Then
-            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Creating game PP partition ...")
-        Else
-            StatusLabel.Text = "Creating game PP partition ..."
-        End If
-
-        CreateGamePartition()
-    End Sub
-
     Private Sub XMBToolsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles XMBToolsMenuItem.Click
         MsgBox("XMB Tools are not available yet in this release.", MsgBoxStyle.Information)
+    End Sub
+
+    Private Sub NewMainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
+        Windows.Application.Current.Shutdown()
     End Sub
 
 End Class
