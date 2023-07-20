@@ -145,7 +145,7 @@ Public Class GameEditor
         End Using
 
         'Create man.xml
-        Using MANWriter As New StreamWriter(ProjectDirectory + "\res\man.xml")
+        Using MANWriter As New StreamWriter(ProjectDirectory + "\res\man.xml", True)
             MANWriter.WriteLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
             MANWriter.WriteLine("")
             MANWriter.WriteLine("<MANUAL version=""1.0"">")

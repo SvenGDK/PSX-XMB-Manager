@@ -131,31 +131,32 @@ Public Class NewMainWindow
                 NBDDriverVersion = SplittedOutput(2).Trim().Split(":"c)(1).Trim()
                 NBDDriverVersionLabel.Text = NBDDriverVersion
                 NBDDriverVersionLabel.Foreground = Brushes.Green
-
-                'Check if NBD is connected and if the drive is already mounted
-                If IsNBDConnected() Then
-                    InstallButton.IsEnabled = True
-                    NBDConnectionLabel.Text = "Connected"
-                    NBDConnectionLabel.Foreground = Brushes.Green
-                    ConnectButton.Content = "Disconnect"
-                ElseIf IsLocalHDDConnected() Then
-                    MountedDrive.DriveID = GetHDDID()
-
-                    InstallButton.IsEnabled = True
-                    NBDConnectionStatusLabel.Text = "Local Connection:"
-                    NBDConnectionLabel.Text = "Connected"
-
-                    EnterIPLabel.Text = "Local PS2/PSX HDD connected."
-                    EnterIPLabel.TextAlignment = TextAlignment.Center
-                    ConnectButton.Visibility = Visibility.Hidden
-                    PSXIPTextBox.Visibility = Visibility.Hidden
-
-                    NBDConnectionLabel.Foreground = Brushes.Green
-                    ConnectButton.Content = "Disconnect"
-                End If
             Else
                 NBDDriverVersionLabel.Text = "Not installed"
                 NBDDriverVersionLabel.Foreground = Brushes.Red
+            End If
+
+            'Check if NBD is connected and if the drive is already mounted
+            If IsNBDConnected() Then
+                InstallButton.IsEnabled = True
+                NBDConnectionLabel.Text = "Connected"
+                NBDConnectionLabel.Foreground = Brushes.Green
+                ConnectButton.Content = "Disconnect"
+
+            ElseIf IsLocalHDDConnected() Then
+                MountedDrive.DriveID = GetHDDID()
+
+                InstallButton.IsEnabled = True
+                NBDConnectionStatusLabel.Text = "Local Connection:"
+                NBDConnectionLabel.Text = "Connected"
+
+                EnterIPLabel.Text = "Local PS2/PSX HDD connected."
+                EnterIPLabel.TextAlignment = TextAlignment.Center
+                ConnectButton.Visibility = Visibility.Hidden
+                PSXIPTextBox.Visibility = Visibility.Hidden
+
+                NBDConnectionLabel.Foreground = Brushes.Green
+                ConnectButton.Content = "Disconnect"
             End If
         End Using
 
@@ -220,15 +221,36 @@ Public Class NewMainWindow
             If ProcessOutput.Contains("wnbd-client") Then 'This is only shown when a drive is actually mounted
 
                 If ProcessOutput.Contains("PS2HDD") Then 'Used by PFS BatchKit Manager
-                    MountedDrive.NBDDriveName = "PS2HDD"
-                    PSXIPTextBox.Text = GetConnectedNBDIP("PS2HDD")
+                    If Dispatcher.CheckAccess() = False Then
+                        Dispatcher.BeginInvoke(Sub()
+                                                   MountedDrive.NBDDriveName = "PS2HDD"
+                                                   PSXIPTextBox.Text = GetConnectedNBDIP("PS2HDD")
+                                               End Sub)
+                    Else
+                        MountedDrive.NBDDriveName = "PS2HDD"
+                        PSXIPTextBox.Text = GetConnectedNBDIP("PS2HDD")
+                    End If
                 ElseIf ProcessOutput.Contains("PSXHDD") Then 'Used by PSX XMB Manager
-                    MountedDrive.NBDDriveName = "PSXHDD"
-                    PSXIPTextBox.Text = GetConnectedNBDIP("PSXHDD")
+                    If Dispatcher.CheckAccess() = False Then
+                        Dispatcher.BeginInvoke(Sub()
+                                                   MountedDrive.NBDDriveName = "PSXHDD"
+                                                   PSXIPTextBox.Text = GetConnectedNBDIP("PSXHDD")
+                                               End Sub)
+                    Else
+                        MountedDrive.NBDDriveName = "PSXHDD"
+                        PSXIPTextBox.Text = GetConnectedNBDIP("PSXHDD")
+                    End If
                 End If
 
-                MountedDrive.HDLDriveName = GetHDLDriveName()
-                MountedDrive.DriveID = GetHDDID()
+                If Dispatcher.CheckAccess() = False Then
+                    Dispatcher.BeginInvoke(Sub()
+                                               MountedDrive.HDLDriveName = GetHDLDriveName()
+                                               MountedDrive.DriveID = GetHDDID()
+                                           End Sub)
+                Else
+                    MountedDrive.HDLDriveName = GetHDLDriveName()
+                    MountedDrive.DriveID = GetHDDID()
+                End If
 
                 Return True
             Else
@@ -281,6 +303,8 @@ Public Class NewMainWindow
 
     Private Function GetConnectedNBDIP(NBDDriveName As String) As String
 
+        Dim NBDIP As String = ""
+
         'Get the connected IP address
         Using WNBDClient As New Process()
 
@@ -299,25 +323,19 @@ Public Class NewMainWindow
             Dim OutputReader As StreamReader = WNBDClient.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
-            Dim NBDIP As String = ""
-
             For Each ReturnedLine As String In ProcessOutput
                 If ReturnedLine.Contains("Hostname") Then
                     NBDIP = ReturnedLine.Split(":"c)(1).Trim()
                     Exit For
                 End If
             Next
-
-            If Not String.IsNullOrWhiteSpace(NBDIP) Then
-                Return NBDIP
-            Else
-                Return ""
-            End If
         End Using
 
+        Return NBDIP
     End Function
 
     Private Function GetHDLDriveName() As String
+        Dim HDLDriveName As String = ""
 
         'Query the drives
         Using HDLDump As New Process()
@@ -332,39 +350,32 @@ Public Class NewMainWindow
             Dim OutputReader As StreamReader = HDLDump.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
-            Dim HDLDriveName As String = ""
-
             'Find the drive
             For Each Line As String In ProcessOutput
                 If Not String.IsNullOrWhiteSpace(Line) Then
                     If Line.Contains("formatted Playstation 2 HDD") Then
                         'Set the found drive as mounted PSX drive
                         Dim DriveInfos As String() = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)
-                        If DriveInfos(0) IsNot Nothing Then
-                            HDLDriveName = DriveInfos(0).Trim()
-                        End If
+                        HDLDriveName = DriveInfos(0).Trim()
+                        Exit For
                     End If
                 End If
             Next
-
-            If Not String.IsNullOrWhiteSpace(HDLDriveName) Then
-
-                If MountStatusLabel.CheckAccess() = False Then
-                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
-                                                                MountStatusLabel.Text = "on " + HDLDriveName
-                                                                MountStatusLabel.Foreground = Brushes.Green
-                                                            End Sub)
-                Else
-                    MountStatusLabel.Text = "on " + HDLDriveName
-                    MountStatusLabel.Foreground = Brushes.Green
-                End If
-
-                Return HDLDriveName
-            Else
-                Return ""
-            End If
         End Using
 
+        If Not String.IsNullOrWhiteSpace(HDLDriveName) Then
+            If MountStatusLabel.CheckAccess() = False Then
+                MountStatusLabel.Dispatcher.BeginInvoke(Sub()
+                                                            MountStatusLabel.Text = "On " + HDLDriveName
+                                                            MountStatusLabel.Foreground = Brushes.Green
+                                                        End Sub)
+            Else
+                MountStatusLabel.Text = "On " + HDLDriveName
+                MountStatusLabel.Foreground = Brushes.Green
+            End If
+        End If
+
+        Return HDLDriveName
     End Function
 
     Private Function GetHDDID() As String
@@ -388,8 +399,10 @@ Public Class NewMainWindow
                 If Not String.IsNullOrWhiteSpace(Line) Then
                     If Line.Contains("WNBD WNBD_DISK SCSI Disk Device") Then
                         DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(5).Trim()
+                        Exit For
                     ElseIf Line.Contains("Microsoft Virtual Disk") Then 'For testing with local VHD
                         DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(3).Trim()
+                        Exit For
                     End If
                 End If
             Next
@@ -554,7 +567,6 @@ Public Class NewMainWindow
             WNBDConnectClient = New Process()
 
             If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
-
                 WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
             Else
                 WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
@@ -713,11 +725,7 @@ Public Class NewMainWindow
     End Sub
 
     Private Sub CreateGamePartition()
-
         Dim CreatedGamePartition As String = ""
-
-        Console.WriteLine(HDLGameID)
-        Console.WriteLine(MountedDrive.DriveID)
 
         'Get the created partition
         Dim QueryOutput As String()
@@ -738,7 +746,6 @@ Public Class NewMainWindow
                 If HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries).Count >= 3 Then
                     HDDPartition = HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4)
                     If HDDPartition.Trim().StartsWith("__." + HDLGameID) Then 'The created hidden partition
-                        Console.WriteLine(HDDPartition.Trim())
                         CreatedGamePartition = HDDPartition.Trim()
                         Exit For
                     End If
@@ -997,7 +1004,6 @@ Public Class NewMainWindow
 
             If Regex.Match(e.Data, "\d\d[%]+").Success Then
                 If Double.TryParse(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""), ProgressPercentage) = True Then
-                    Console.WriteLine(ProgressPercentage)
                     If StatusProgressBar.CheckAccess() = False Then
                         StatusProgressBar.Dispatcher.BeginInvoke(Sub() StatusProgressBar.Value = ProgressPercentage)
                     Else
@@ -1010,7 +1016,6 @@ Public Class NewMainWindow
     End Sub
 
     Private Sub HDL_Dump_Exited(sender As Object, e As EventArgs) Handles HDL_Dump.Exited
-
         HDL_Dump.CancelOutputRead()
 
         'Proceed to game partition
@@ -1035,33 +1040,37 @@ Public Class NewMainWindow
                 MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
                 Exit Sub
             ElseIf e.Data.Contains("INFO Successfully connected to NBD server") Then
-                MountedDrive.DriveID = GetHDDID()
-                MountedDrive.HDLDriveName = GetHDLDriveName()
 
-                If InstallButton.CheckAccess() = False Then
-                    InstallButton.Dispatcher.BeginInvoke(Sub() InstallButton.IsEnabled = True)
-                Else
-                    InstallButton.IsEnabled = True
-                End If
-
-                If NBDConnectionLabel.CheckAccess() = False Then
-                    NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
-                                                                  NBDConnectionLabel.Text = "Connected"
-                                                                  NBDConnectionLabel.Foreground = Brushes.Green
-                                                              End Sub)
-                Else
-                    NBDConnectionLabel.Text = "Connected"
-                    NBDConnectionLabel.Foreground = Brushes.Green
-                End If
-
-                If ConnectButton.CheckAccess() = False Then
-                    ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
-                Else
-                    ConnectButton.Content = "Disconnect"
-                End If
-
+                'Cancel reading the connection status
                 WNBDConnectClient.CancelErrorRead()
-                MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
+
+                If IsNBDConnected() Then
+
+                    If InstallButton.CheckAccess() = False Then
+                        InstallButton.Dispatcher.BeginInvoke(Sub() InstallButton.IsEnabled = True)
+                    Else
+                        InstallButton.IsEnabled = True
+                    End If
+
+                    If NBDConnectionLabel.CheckAccess() = False Then
+                        NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
+                                                                      NBDConnectionLabel.Text = "Connected"
+                                                                      NBDConnectionLabel.Foreground = Brushes.Green
+                                                                  End Sub)
+                    Else
+                        NBDConnectionLabel.Text = "Connected"
+                        NBDConnectionLabel.Foreground = Brushes.Green
+                    End If
+
+                    If ConnectButton.CheckAccess() = False Then
+                        ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
+                    Else
+                        ConnectButton.Content = "Disconnect"
+                    End If
+
+                    MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
+                End If
+
             End If
         End If
     End Sub

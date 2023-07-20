@@ -97,7 +97,6 @@ Public Class GamePartitionManager
             Dim Infos As String() = File.ReadAllLines(ResPath + "\info.sys")
             UninstallMsgTextBox.Dispatcher.BeginInvoke(Sub() UninstallMsgTextBox.Text = Infos(15).Split("="c)(1).Trim())
         End If
-
     End Sub
 
     Private Sub PartitionLoaderWorker_RunWorkerCompleted(sender As Object, e As RunWorkerCompletedEventArgs) Handles PartitionLoaderWorker.RunWorkerCompleted
@@ -277,7 +276,7 @@ Public Class GamePartitionManager
         End Using
 
         'Create man.xml (manual)
-        Using MANWriter As New StreamWriter(TempDirectory + "\res\man.xml")
+        Using MANWriter As New StreamWriter(TempDirectory + "\res\man.xml", False)
             MANWriter.WriteLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
             MANWriter.WriteLine("")
             MANWriter.WriteLine("<MANUAL version=""1.0"">")
@@ -419,6 +418,7 @@ Public Class GamePartitionManager
 
             'Set the current directory back
             Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory)
+
             'Remove the temporary folder
             If Directory.Exists(TempDirectory) Then
                 Directory.Delete(TempDirectory, True)
