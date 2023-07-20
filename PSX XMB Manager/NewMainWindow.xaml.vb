@@ -707,13 +707,13 @@ Public Class NewMainWindow
             If GetDiscType(GameISO) = DiscType.DVD Then
                 LockUI() 'Disable UI controls
 
-                HDL_Dump.StartInfo.Arguments = "inject_dvd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ """ + GameID + """ *u4 -hide"
+                HDL_Dump.StartInfo.Arguments = "inject_dvd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ " + GameID + " *u4 -hide"
                 HDL_Dump.Start()
                 HDL_Dump.BeginOutputReadLine()
             Else
                 LockUI()
 
-                HDL_Dump.StartInfo.Arguments = "inject_cd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ """ + GameID + """ *u4 -hide"
+                HDL_Dump.StartInfo.Arguments = "inject_cd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ " + GameID + " *u4 -hide"
                 HDL_Dump.Start()
                 HDL_Dump.BeginOutputReadLine()
             End If
@@ -860,7 +860,6 @@ Public Class NewMainWindow
             HDLDump.StartInfo.CreateNoWindow = True
             HDLDump.Start()
 
-            Dim OutputReader As StreamReader = HDLDump.StandardOutput
             Dim output = HDLDump.StandardOutput.ReadToEnd()
 
             If Not output.Contains("partition not found:") Then
@@ -950,6 +949,7 @@ Public Class NewMainWindow
             PFSShellProcess.StartInfo.CreateNoWindow = True
 
             PFSShellProcess.Start()
+            PFSShellProcess.WaitForExit()
 
             Dim ShellReader As StreamReader = PFSShellProcess.StandardOutput
             Dim ProcessOutput As String = ShellReader.ReadToEnd()
