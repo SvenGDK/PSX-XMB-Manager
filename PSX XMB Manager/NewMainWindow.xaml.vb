@@ -3,17 +3,17 @@ Imports System.IO
 Imports System.Net
 Imports System.Text.RegularExpressions
 Imports System.Windows.Media.Animation
+Imports System.Windows.Threading
 
 Public Class NewMainWindow
 
     Dim WithEvents HDL_Dump As New Process()
-    Dim WithEvents WNBDConnectClient As New Process()
 
     Public Shared MountedDrive As MountedPSXDrive
     Dim HDLGameID As String = ""
     Dim CurrentProjectDirectory As String = ""
 
-    'Public WithEvents HDL_DumpWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
+    Dim WithEvents ConnectDelay As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(2)}
     Dim WithEvents ContentDownloader As New WebClient()
 
     Public Structure MountedPSXDrive
@@ -201,6 +201,10 @@ Public Class NewMainWindow
     End Sub
 
     Private Function IsNBDConnected() As Boolean
+
+        Dim ProcessOutput As String()
+        Dim NBDDriveName As String = ""
+
         Using WNBDClient As New Process()
 
             If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
@@ -214,49 +218,39 @@ Public Class NewMainWindow
             WNBDClient.StartInfo.UseShellExecute = False
             WNBDClient.StartInfo.CreateNoWindow = True
             WNBDClient.Start()
+            WNBDClient.WaitForExit()
 
             Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-            Dim ProcessOutput As String = OutputReader.ReadToEnd()
-
-            If ProcessOutput.Contains("wnbd-client") Then 'This is only shown when a drive is actually mounted
-
-                If ProcessOutput.Contains("PS2HDD") Then 'Used by PFS BatchKit Manager
-                    If Dispatcher.CheckAccess() = False Then
-                        Dispatcher.BeginInvoke(Sub()
-                                                   MountedDrive.NBDDriveName = "PS2HDD"
-                                                   PSXIPTextBox.Text = GetConnectedNBDIP("PS2HDD")
-                                               End Sub)
-                    Else
-                        MountedDrive.NBDDriveName = "PS2HDD"
-                        PSXIPTextBox.Text = GetConnectedNBDIP("PS2HDD")
-                    End If
-                ElseIf ProcessOutput.Contains("PSXHDD") Then 'Used by PSX XMB Manager
-                    If Dispatcher.CheckAccess() = False Then
-                        Dispatcher.BeginInvoke(Sub()
-                                                   MountedDrive.NBDDriveName = "PSXHDD"
-                                                   PSXIPTextBox.Text = GetConnectedNBDIP("PSXHDD")
-                                               End Sub)
-                    Else
-                        MountedDrive.NBDDriveName = "PSXHDD"
-                        PSXIPTextBox.Text = GetConnectedNBDIP("PSXHDD")
-                    End If
-                End If
-
-                If Dispatcher.CheckAccess() = False Then
-                    Dispatcher.BeginInvoke(Sub()
-                                               MountedDrive.HDLDriveName = GetHDLDriveName()
-                                               MountedDrive.DriveID = GetHDDID()
-                                           End Sub)
-                Else
-                    MountedDrive.HDLDriveName = GetHDLDriveName()
-                    MountedDrive.DriveID = GetHDDID()
-                End If
-
-                Return True
-            Else
-                Return False
-            End If
+            ProcessOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
         End Using
+
+        For Each ReturnedLine As String In ProcessOutput
+            If ReturnedLine.Contains("wnbd-client") Then
+                NBDDriveName = ReturnedLine.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4).Trim()
+                Exit For
+            End If
+        Next
+
+        If Not String.IsNullOrEmpty(NBDDriveName) Then
+
+            MountedDrive.NBDDriveName = NBDDriveName
+
+            If PSXIPTextBox.Dispatcher.CheckAccess() = False Then
+                PSXIPTextBox.Dispatcher.BeginInvoke(Sub()
+                                                        PSXIPTextBox.Text = GetConnectedNBDIP(NBDDriveName)
+                                                    End Sub)
+            Else
+                PSXIPTextBox.Text = GetConnectedNBDIP(NBDDriveName)
+            End If
+
+            MountedDrive.HDLDriveName = GetHDLDriveName()
+            MountedDrive.DriveID = GetHDDID()
+
+            Return True
+        Else
+            Return False
+        End If
+
     End Function
 
     Private Function IsLocalHDDConnected() As Boolean
@@ -303,6 +297,7 @@ Public Class NewMainWindow
 
     Private Function GetConnectedNBDIP(NBDDriveName As String) As String
 
+        Dim ProcessOutput As String()
         Dim NBDIP As String = ""
 
         'Get the connected IP address
@@ -319,17 +314,18 @@ Public Class NewMainWindow
             WNBDClient.StartInfo.UseShellExecute = False
             WNBDClient.StartInfo.CreateNoWindow = True
             WNBDClient.Start()
+            WNBDClient.WaitForExit()
 
             Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-            Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-
-            For Each ReturnedLine As String In ProcessOutput
-                If ReturnedLine.Contains("Hostname") Then
-                    NBDIP = ReturnedLine.Split(":"c)(1).Trim()
-                    Exit For
-                End If
-            Next
+            ProcessOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
         End Using
+
+        For Each ReturnedLine As String In ProcessOutput
+            If ReturnedLine.Contains("Hostname") Then
+                NBDIP = ReturnedLine.Split(":"c)(1).Trim()
+                Exit For
+            End If
+        Next
 
         Return NBDIP
     End Function
@@ -345,6 +341,7 @@ Public Class NewMainWindow
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
             HDLDump.Start()
+            HDLDump.WaitForExit()
 
             'Read the output
             Dim OutputReader As StreamReader = HDLDump.StandardOutput
@@ -389,6 +386,7 @@ Public Class NewMainWindow
             WMIC.StartInfo.UseShellExecute = False
             WMIC.StartInfo.CreateNoWindow = True
             WMIC.Start()
+            WMIC.WaitForExit()
 
             'Read the output
             Dim OutputReader As StreamReader = WMIC.StandardOutput
@@ -406,9 +404,9 @@ Public Class NewMainWindow
                     End If
                 End If
             Next
-
-            Return DriveID
         End Using
+
+        Return DriveID
     End Function
 
     Public Sub ReloadProjects()
@@ -564,22 +562,20 @@ Public Class NewMainWindow
     Private Sub ConnectButton_Click(sender As Object, e As RoutedEventArgs) Handles ConnectButton.Click
         If ConnectButton.Content.ToString = "Connect" Then
 
-            WNBDConnectClient = New Process()
+            Using WNBDConnectClient As New Process()
+                If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+                    WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
+                Else
+                    WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
+                End If
 
-            If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
-                WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
-            Else
-                WNBDConnectClient.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
-            End If
+                WNBDConnectClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
+                WNBDConnectClient.StartInfo.UseShellExecute = False
+                WNBDConnectClient.StartInfo.CreateNoWindow = True
+                WNBDConnectClient.Start()
+            End Using
 
-            WNBDConnectClient.StartInfo.Arguments = "map PSXHDD " + PSXIPTextBox.Text
-            WNBDConnectClient.StartInfo.RedirectStandardError = True
-            AddHandler WNBDConnectClient.ErrorDataReceived, AddressOf ErrorDataHandler
-            WNBDConnectClient.StartInfo.UseShellExecute = False
-            WNBDConnectClient.StartInfo.CreateNoWindow = True
-
-            WNBDConnectClient.Start()
-            WNBDConnectClient.BeginErrorReadLine()
+            ConnectDelay.Start()
 
         ElseIf ConnectButton.Content.ToString = "Disconnect" Then
 
@@ -1028,53 +1024,6 @@ Public Class NewMainWindow
         CreateGamePartition()
     End Sub
 
-    Public Sub ErrorDataHandler(sender As Object, e As DataReceivedEventArgs)
-        If Not String.IsNullOrEmpty(e.Data) Then
-            'libwnbd.dll!WnbdIoctlCreate ERROR Could not create WNBD disk. - Probably NBD driver not correctly installed or just entered the wrong IP
-            If e.Data.Contains("libwnbd.dll!WnbdIoctlCreate") Then
-                WNBDConnectClient.CancelErrorRead()
-                MsgBox("Could not map your PSX HDD, please check if your NBD server is running and set up correctly." + vbCrLf + "Also check if you entered the correct IP address.", MsgBoxStyle.Exclamation)
-                Exit Sub
-            ElseIf e.Data.Contains("the option '--hostname' is required but missing") Then
-                WNBDConnectClient.CancelErrorRead()
-                MsgBox("Please enter an IP address.", MsgBoxStyle.Exclamation)
-                Exit Sub
-            ElseIf e.Data.Contains("INFO Successfully connected to NBD server") Then
-
-                'Cancel reading the connection status
-                WNBDConnectClient.CancelErrorRead()
-
-                If IsNBDConnected() Then
-
-                    If InstallButton.CheckAccess() = False Then
-                        InstallButton.Dispatcher.BeginInvoke(Sub() InstallButton.IsEnabled = True)
-                    Else
-                        InstallButton.IsEnabled = True
-                    End If
-
-                    If NBDConnectionLabel.CheckAccess() = False Then
-                        NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
-                                                                      NBDConnectionLabel.Text = "Connected"
-                                                                      NBDConnectionLabel.Foreground = Brushes.Green
-                                                                  End Sub)
-                    Else
-                        NBDConnectionLabel.Text = "Connected"
-                        NBDConnectionLabel.Foreground = Brushes.Green
-                    End If
-
-                    If ConnectButton.CheckAccess() = False Then
-                        ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
-                    Else
-                        ConnectButton.Content = "Disconnect"
-                    End If
-
-                    MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
-                End If
-
-            End If
-        End If
-    End Sub
-
     Private Sub ProjectsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles ProjectsMenuItem.Click
 
         'Switch to the ProjectsGrid
@@ -1132,6 +1081,40 @@ Public Class NewMainWindow
 
     Private Sub NewMainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
         Windows.Application.Current.Shutdown()
+    End Sub
+
+    Private Sub ConnectDelay_Tick(sender As Object, e As EventArgs) Handles ConnectDelay.Tick
+        'Get drive properties after the connect delay
+        If IsNBDConnected() Then
+
+            If InstallButton.CheckAccess() = False Then
+                InstallButton.Dispatcher.BeginInvoke(Sub() InstallButton.IsEnabled = True)
+            Else
+                InstallButton.IsEnabled = True
+            End If
+
+            If NBDConnectionLabel.CheckAccess() = False Then
+                NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
+                                                              NBDConnectionLabel.Text = "Connected"
+                                                              NBDConnectionLabel.Foreground = Brushes.Green
+                                                          End Sub)
+            Else
+                NBDConnectionLabel.Text = "Connected"
+                NBDConnectionLabel.Foreground = Brushes.Green
+            End If
+
+            If ConnectButton.CheckAccess() = False Then
+                ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
+            Else
+                ConnectButton.Content = "Disconnect"
+            End If
+
+            MsgBox("Your PSX HDD is now connected." + vbCrLf + "You can now install your project on the PSX.", MsgBoxStyle.Information)
+        Else
+            MsgBox("Could not connect to the PSX." + vbCrLf + "Please check your IP address.", MsgBoxStyle.Exclamation)
+        End If
+
+        ConnectDelay.Stop()
     End Sub
 
 End Class
