@@ -873,7 +873,7 @@ Public Class GameLibrary
             End Using
 
             'Create man.xml
-            Using MANWriter As New StreamWriter(NewGameProjectDirectory + "\res\man.xml", True)
+            Using MANWriter As New StreamWriter(NewGameProjectDirectory + "\res\man.xml", False)
                 MANWriter.WriteLine("<?xml version=""1.0"" encoding=""UTF-8""?>")
                 MANWriter.WriteLine("")
                 MANWriter.WriteLine("<MANUAL version=""1.0"">")
