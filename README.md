@@ -2,7 +2,7 @@
 A new tool that simplifies the installation of homebrew and games on the XMB of the PSX.</br>
 Now features also a backup manager for PS2 games on PC & PSX.
 
-<img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/024c4524-b1c2-497c-8b7a-ce21c9b962bf">
+<img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/82feae61-3cf9-44f2-b6f3-65d1789f9a80">
 
 ## Notes
 - Requires FMCB installed on your memory card and Open PS2 Loader (to load games)
