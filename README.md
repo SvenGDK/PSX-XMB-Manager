@@ -14,7 +14,8 @@ The latest (v2+) release features also a backup manager for PS2 games on PC & in
 
 ## Drivers
 NBD (REQUIRED)
-- If you already installed the unsigned driver and used PFS BatchKit Manager before, then you can already proceed with creating a project.
+- Please do not use the very latest NDB driver as it can cause issues with PSX XMB Manager.
+  - Use the same build like in the screenshot or 0.5, or lower.
 - To connect to the NBD server of your PSX you will first need an NBD client and driver on your PC:
   - The Ceph MSI installer bundles a signed version of the WNBD driver. </br>
   It can be downloaded from here: https://cloudbase.it/ceph-for-windows/
