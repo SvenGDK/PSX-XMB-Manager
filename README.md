@@ -1,30 +1,32 @@
 # PSX XMB Manager
-PSX XMB Manager is able to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
-Installed homebrew and games will be displayed on the XMB where you can start them like on the PS3.</br>
-The latest (v2+) release features also a backup manager for PS2 games on PC & installed games on the PSX HDD.
+PSX XMB Manager is the first easy solution to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
+The installed game or homebrew will show up on the XMB where you can start it like on the PS3.</br>
+The latest (v2+) release features also a backup manager for PS2 games on PC & installed games on the PSX HDD (Game Library).
 
 <img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/82feae61-3cf9-44f2-b6f3-65d1789f9a80">
 
 ## Notes
 - Requires FMCB installed on your memory card and Open PS2 Loader (to load games)
-  - Guide: https://www.youtube.com/watch?v=9SU594F0pYc
+  - Installation Guide: [https://www.youtube.com/watch?v=9SU594F0pYc](https://www.youtube.com/watch?v=9SU594F0pYc)
+  - Modified Open PS2 Loader: [https://github.com/SvenGDK/Open-PS2-Loader](https://github.com/SvenGDK/Open-PS2-Loader)
+  - Do not forget to place/replace OPNPS2LD.ELF in the OPL+ partition
 - "XMB Tools" will be available on a later release.
 - It is not recommended to abort an installation within the first 3%, this could corrupt your HDD. The same goes for the last percentages of the installation.
 - Only connect your PSX's HDD locally if you know how to and never initialize it on Windows !
 
-## Drivers
-NBD (REQUIRED)
-- Please do not use the very latest NDB driver as it can cause issues with PSX XMB Manager.
-  - Use the same build like in the screenshot or 0.5, or lower.
+## Required Drivers
+PSX XMB Manager v1 - v2.2.1 requires [NBD 0.5.0-15 + Dokan Driver 0x190](https://github.com/SvenGDK/PSX-XMB-Manager/releases/download/v2.2.1/NBD.0.5.0-15.+.Dokan.Driver.0x190.7z) (install both and reboot).
+
+(W)NBD
 - To connect to the NBD server of your PSX you will first need an NBD client and driver on your PC:
   - The Ceph MSI installer bundles a signed version of the WNBD driver. </br>
-  It can be downloaded from here: https://cloudbase.it/ceph-for-windows/
+  It can be downloaded from here: [https://cloudbase.it/ceph-for-windows/](https://cloudbase.it/ceph-for-windows/)
   - Install the client and reboot (required)
-  - Guide: https://www.youtube.com/watch?v=FuPfzTY-Tps
+- Install & Connection Guide: [https://www.youtube.com/watch?v=FuPfzTY-Tps](https://www.youtube.com/watch?v=FuPfzTY-Tps)
 
 Dokany
-- Required in case you want to mount & modify game partitions on the PSX HDD.
-- https://github.com/dokan-dev/dokany/wiki/Installation
+- Required to mount & modify game partitions on the PSX HDD
+- [https://github.com/dokan-dev/dokany/releases](https://github.com/dokan-dev/dokany/releases)
 
 ## Creating a new project
 - Go to Projects -> New -> You can choose here between a game or homebrew (app) project
