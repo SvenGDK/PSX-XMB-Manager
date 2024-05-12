@@ -1,5 +1,5 @@
 # PSX XMB Manager
-PSX XMB Manager is the first easy solution to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
+PSX XMB Manager is a tool that helps to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
 The installed game or homebrew will show up on the XMB where you can start it like on the PS3.</br>
 The latest (v2+) release features also a backup manager for PS2 games on PC & installed games on the PSX HDD (Game Library).
 
