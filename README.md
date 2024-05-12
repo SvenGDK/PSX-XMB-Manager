@@ -1,9 +1,17 @@
 # PSX XMB Manager
-PSX XMB Manager is a tool that helps to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
+A tool that helps to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
 The installed game or homebrew will show up on the XMB where you can start it like on the PS3.</br>
-The latest (v2+) release features also a backup manager for PS2 games on PC & installed games on the PSX HDD (Game Library).
 
 <img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/82feae61-3cf9-44f2-b6f3-65d1789f9a80">
+
+## Features
+- Install PS2 homebrew and games on the internal PSX HDD
+- Backup manager for PS2 games on PC & installed games on the PSX HDD (Game Library)
+  - A right click on a (local) game will give you the possibility to quickly create a game project for the PSX.
+- Mount games from PSX HDD and modify/update the partition header
+  - Change game properties / Update OPL-Launcher
+- HDD Partition Manager (Create partition, Remove partition (destructive), Change partition visibility)
+- Game Partition Manager (Dump partition header, Change game title, flags, DMA)
 
 ## Notes
 - Requires FMCB installed on your memory card and Open PS2 Loader (to load games)
@@ -15,7 +23,7 @@ The latest (v2+) release features also a backup manager for PS2 games on PC & in
 - Only connect your PSX's HDD locally if you know how to and never initialize it on Windows !
 
 ## Required Drivers
-PSX XMB Manager v1 - v2.2.1 requires [NBD 0.5.0-15 + Dokan Driver 0x190](https://github.com/SvenGDK/PSX-XMB-Manager/releases/download/v2.2.1/NBD.0.5.0-15.+.Dokan.Driver.0x190.7z) (install both and reboot).
+PSX XMB Manager v1 - v2.2.1 (only) requires [NBD 0.5.0-15 + Dokan Driver 0x190](https://github.com/SvenGDK/PSX-XMB-Manager/releases/download/v2.2.1/NBD.0.5.0-15.+.Dokan.Driver.0x190.7z) (install both and reboot).
 
 (W)NBD
 - To connect to the NBD server of your PSX you will first need an NBD client and driver on your PC:
