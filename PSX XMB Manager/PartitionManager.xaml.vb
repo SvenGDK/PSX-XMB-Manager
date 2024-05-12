@@ -1,7 +1,9 @@
 ﻿Imports System.IO
+Imports PSX_XMB_Manager.Structs
 
 Public Class PartitionManager
 
+    Public MountedDrive As MountedPSXDrive
     Dim PartitionsContextMenu As New ContextMenu()
     Dim GamePartitionContextMenu As New ContextMenu()
 
@@ -14,130 +16,13 @@ Public Class PartitionManager
     Dim WithEvents DumpItem As New MenuItem With {.Header = "Dump partition header"}
     Dim WithEvents RemoveItem As New MenuItem With {.Header = "Remove partition (destructive)"}
 
-    Public Structure Partition
-        Private _Type As String
-        Private _Start As String
-        Private _Parts As String
-        Private _Size As String
-        Private _Name As String
-
-        Public Property Type As String
-            Get
-                Return _Type
-            End Get
-            Set
-                _Type = Value
-            End Set
-        End Property
-
-        Public Property Start As String
-            Get
-                Return _Start
-            End Get
-            Set
-                _Start = Value
-            End Set
-        End Property
-
-        Public Property Parts As String
-            Get
-                Return _Parts
-            End Get
-            Set
-                _Parts = Value
-            End Set
-        End Property
-
-        Public Property Size As String
-            Get
-                Return _Size
-            End Get
-            Set
-                _Size = Value
-            End Set
-        End Property
-
-        Public Property Name As String
-            Get
-                Return _Name
-            End Get
-            Set
-                _Name = Value
-            End Set
-        End Property
-    End Structure
-
-    Public Structure GamePartition
-        Private _Type As String
-        Private _Size As String
-        Private _Name As String
-        Private _Flags As String
-        Private _DMA As String
-        Private _Startup As String
-
-        Public Property Type As String
-            Get
-                Return _Type
-            End Get
-            Set
-                _Type = Value
-            End Set
-        End Property
-
-        Public Property Size As String
-            Get
-                Return _Size
-            End Get
-            Set
-                _Size = Value
-            End Set
-        End Property
-
-        Public Property Flags As String
-            Get
-                Return _Flags
-            End Get
-            Set
-                _Flags = Value
-            End Set
-        End Property
-
-        Public Property DMA As String
-            Get
-                Return _DMA
-            End Get
-            Set
-                _DMA = Value
-            End Set
-        End Property
-
-        Public Property Startup As String
-            Get
-                Return _Startup
-            End Get
-            Set
-                _Startup = Value
-            End Set
-        End Property
-
-        Public Property Name As String
-            Get
-                Return _Name
-            End Get
-            Set
-                _Name = Value
-            End Set
-        End Property
-
-    End Structure
-
     Private Sub LoadParititons()
         PartitionsListView.Items.Clear()
         Dim QueryOutput As String()
 
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "toc " + NewMainWindow.MountedDrive.HDLDriveName
+            HDLDump.StartInfo.Arguments = "toc " + MountedDrive.HDLDriveName
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
@@ -175,7 +60,7 @@ Public Class PartitionManager
 
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "hdl_toc " + NewMainWindow.MountedDrive.HDLDriveName
+            HDLDump.StartInfo.Arguments = "hdl_toc " + MountedDrive.HDLDriveName
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
@@ -234,7 +119,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ """ + NewGameTitle + """"
+                    HDLDump.StartInfo.Arguments = "modify " + MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ """ + NewGameTitle + """"
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -262,7 +147,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
+                    HDLDump.StartInfo.Arguments = "modify " + MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -289,7 +174,7 @@ Public Class PartitionManager
 
                 Using HDLDump As New Process()
                     HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                    HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
+                    HDLDump.StartInfo.Arguments = "modify " + MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ " + NewGameFlags
                     HDLDump.StartInfo.RedirectStandardOutput = True
                     HDLDump.StartInfo.UseShellExecute = False
                     HDLDump.StartInfo.CreateNoWindow = True
@@ -315,7 +200,7 @@ Public Class PartitionManager
 
                     Using HDLDump As New Process()
                         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                        HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -unhide"
+                        HDLDump.StartInfo.Arguments = "modify " + MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -unhide"
                         HDLDump.StartInfo.RedirectStandardError = True
                         HDLDump.StartInfo.UseShellExecute = False
                         HDLDump.StartInfo.CreateNoWindow = True
@@ -339,7 +224,7 @@ Public Class PartitionManager
 
                     Using HDLDump As New Process()
                         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                        HDLDump.StartInfo.Arguments = "modify " + NewMainWindow.MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -hide"
+                        HDLDump.StartInfo.Arguments = "modify " + MountedDrive.HDLDriveName + " """ + SelectedPartition.Name + """ -hide"
                         HDLDump.StartInfo.RedirectStandardError = True
                         HDLDump.StartInfo.UseShellExecute = False
                         HDLDump.StartInfo.CreateNoWindow = True
@@ -377,7 +262,7 @@ Public Class PartitionManager
 
                 'Set rmpart command
                 Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\rmpart.txt", False)
-                    CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
+                    CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
                     CommandFileWriter.WriteLine("rmpart " + SelectedPartition.Name)
                     CommandFileWriter.WriteLine("exit")
                 End Using
@@ -414,7 +299,7 @@ Public Class PartitionManager
     End Sub
 
     Private Sub CreateNewPartitionButton_Click(sender As Object, e As RoutedEventArgs) Handles CreateNewPartitionButton.Click
-        Dim NewPartitionWindow As New NewPartition() With {.ShowActivated = True}
+        Dim NewPartitionWindow As New NewPartition() With {.ShowActivated = True, .MountedDrive = MountedDrive}
         NewPartitionWindow.Show()
     End Sub
 

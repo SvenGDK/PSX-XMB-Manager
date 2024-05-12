@@ -28,24 +28,26 @@ Public Class AppEditor
 
     Private Sub SaveButton_Click(sender As Object, e As RoutedEventArgs) Handles SaveButton.Click
         'Save selected XMB cover as compressed PNG
-        If CoverPictureBox.Tag IsNot Nothing And Not CoverPictureBox.Tag.ToString = ProjectDirectory + "\res\jkt_002.png" Then
-            Dim Quantizer As New WuQuantizer()
-            Dim ResizedBitmap As New Bitmap(CType(Image.FromFile(CoverPictureBox.Tag.ToString), Bitmap), New Size(74, 108))
+        If CoverPictureBox.Tag IsNot Nothing Then
+            If CoverPictureBox.Tag.ToString() = ProjectDirectory + "\res\jkt_002.png" = False Then
+                Dim Quantizer As New WuQuantizer()
+                Dim ResizedBitmap As New Bitmap(CType(Image.FromFile(CoverPictureBox.Tag.ToString), Bitmap), New Size(74, 108))
 
-            If ResizedBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                ConvertTo32bppAndDisposeOriginal(ResizedBitmap)
+                If ResizedBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                    ConvertTo32bppAndDisposeOriginal(ResizedBitmap)
+                End If
+
+                Try
+                    Using CompressedImage = Quantizer.QuantizeImage(ResizedBitmap)
+                        CompressedImage.Save(ProjectDirectory + "\res\jkt_001.png", Imaging.ImageFormat.Png)
+                        CompressedImage.Save(ProjectDirectory + "\res\jkt_002.png", Imaging.ImageFormat.Png)
+                    End Using
+                Catch ex As Exception
+                    MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
+                Finally
+                    ResizedBitmap.Dispose()
+                End Try
             End If
-
-            Try
-                Using CompressedImage = Quantizer.QuantizeImage(ResizedBitmap)
-                    CompressedImage.Save(ProjectDirectory + "\res\jkt_001.png", Imaging.ImageFormat.Png)
-                    CompressedImage.Save(ProjectDirectory + "\res\jkt_002.png", Imaging.ImageFormat.Png)
-                End Using
-            Catch ex As Exception
-                MsgBox("Could not compress PNG." + vbCrLf + ex.Message)
-            Finally
-                ResizedBitmap.Dispose()
-            End Try
         End If
 
         'Write info.sys to res directory

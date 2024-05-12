@@ -3,13 +3,15 @@ Imports System.IO
 Imports System.Net
 Imports System.Windows.Forms
 Imports nQuant
+Imports PSX_XMB_Manager.Structs
 
 Public Class GamePartitionManager
 
+    Public MountedDrive As MountedPSXDrive
     Public AssociatedDriveLetter As String
     Public AssociatedPartition As String
-    Dim Unmounted As Boolean = False
 
+    Private Unmounted As Boolean = False
     Private TextboxChangesDictionary As New Dictionary(Of TextBox, String)
     Private CheckboxChangesDictionary As New Dictionary(Of CheckBox, Boolean?)
     Private ImageChangesDictionary As New Dictionary(Of Image, ImageSource)
@@ -18,6 +20,10 @@ Public Class GamePartitionManager
     Dim WithEvents NewLoadingWindow As New SyncWindow() With {.Title = "Loading files", .ShowActivated = True, .WindowStartupLocation = WindowStartupLocation.CenterScreen}
     Dim WithEvents PartitionLoaderWorker As New BackgroundWorker() With {.WorkerReportsProgress = True}
     Dim WithEvents ContentDownloader As New WebClient()
+
+    Private Sub GamePartitionManager_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
+        PartitionLoaderWorker.RunWorkerAsync()
+    End Sub
 
     Private Sub GamePartitionManager_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
         If Unmounted = False Then
@@ -29,17 +35,31 @@ Public Class GamePartitionManager
     End Sub
 
     Private Sub UnMountPartition(VolumeLabel As String)
-        Using DokanCTL As New Process()
-            DokanCTL.StartInfo.FileName = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan\DokanLibrary-2.0.6\dokanctl.exe"
-            DokanCTL.StartInfo.Arguments = "/u " + VolumeLabel
-            DokanCTL.StartInfo.UseShellExecute = False
-            DokanCTL.StartInfo.CreateNoWindow = True
-            DokanCTL.Start()
-        End Using
-    End Sub
+        If Directory.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan") Then
+            'Get the Dokan Library folder
+            Dim DokanLibraryFolder As String = ""
+            For Each Folder In Directory.GetDirectories(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan")
+                Dim FolderInfo As New DirectoryInfo(Folder)
+                If FolderInfo.Name.Contains("DokanLibrary") Or FolderInfo.Name.Contains("Dokan Library") Then
+                    DokanLibraryFolder = Folder
+                    Exit For
+                End If
+            Next
 
-    Private Sub GamePartitionManager_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
-        PartitionLoaderWorker.RunWorkerAsync()
+            If Not String.IsNullOrEmpty(DokanLibraryFolder) AndAlso File.Exists(DokanLibraryFolder + "\dokanctl.exe") Then
+                Using DokanCTL As New Process()
+                    DokanCTL.StartInfo.FileName = DokanLibraryFolder + "\dokanctl.exe"
+                    DokanCTL.StartInfo.Arguments = "/u " + VolumeLabel
+                    DokanCTL.StartInfo.UseShellExecute = False
+                    DokanCTL.StartInfo.CreateNoWindow = True
+                    DokanCTL.Start()
+                End Using
+            Else
+                MsgBox("Could not unmount the game partition." + vbCrLf + "Cannot find dokanctl.exe at " + My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan Library...", MsgBoxStyle.Critical, "Error while unmounting")
+            End If
+        Else
+            MsgBox("Could not unmount the game partition." + vbCrLf + "Cannot find Dokan Library at " + My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Dokan Library", MsgBoxStyle.Critical, "Error while unmounting")
+        End If
     End Sub
 
     Private Sub GamePartitionManager_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -328,7 +348,7 @@ Public Class GamePartitionManager
         Dim HDLDumpOutput As String = ""
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = "hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "modify_header " + NewMainWindow.MountedDrive.HDLDriveName + " " + AssociatedPartition
+            HDLDump.StartInfo.Arguments = "modify_header " + MountedDrive.HDLDriveName + " " + AssociatedPartition
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True
@@ -342,7 +362,7 @@ Public Class GamePartitionManager
         If Not HDLDumpOutput.Contains("partition not found:") Then
             'Set the mkdir & put commands
             Using CommandFileWriter As New StreamWriter(AppDomain.CurrentDomain.BaseDirectory + "Tools\cmdlist\push.txt", False)
-                CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
+                CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
                 CommandFileWriter.WriteLine("mount " + AssociatedPartition)
                 CommandFileWriter.WriteLine("mkdir res") 'continues if it already exists - useful if not present yet
                 CommandFileWriter.WriteLine("cd res")
@@ -593,7 +613,7 @@ Public Class GamePartitionManager
         Dim HDLDumpOutput As String = ""
         Using HDLDump As New Process()
             HDLDump.StartInfo.FileName = "hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "modify_header " + NewMainWindow.MountedDrive.HDLDriveName + " " + AssociatedPartition
+            HDLDump.StartInfo.Arguments = "modify_header " + MountedDrive.HDLDriveName + " " + AssociatedPartition
             HDLDump.StartInfo.RedirectStandardOutput = True
             HDLDump.StartInfo.UseShellExecute = False
             HDLDump.StartInfo.CreateNoWindow = True

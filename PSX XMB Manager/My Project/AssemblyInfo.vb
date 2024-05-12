@@ -15,7 +15,7 @@ Imports System.Windows
 <Assembly: AssemblyDescription("Install and manage homebrew & games on the PSX DESR.")>
 <Assembly: AssemblyCompany("SvenGDK")>
 <Assembly: AssemblyProduct("PSX XMB Manager")>
-<Assembly: AssemblyCopyright("Copyright © SvenGDK 2022-2023")>
+<Assembly: AssemblyCopyright("Copyright © SvenGDK 2022-2024")>
 <Assembly: AssemblyTrademark("SvenGDK")>
 <Assembly: ComVisible(false)>
 
@@ -55,5 +55,5 @@ Imports System.Windows
 ' indem Sie "*" wie unten gezeigt eingeben:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("2.2.1.0")>
-<Assembly: AssemblyFileVersion("2.2.1.0")>
+<Assembly: AssemblyVersion("2.3.0.0")>
+<Assembly: AssemblyFileVersion("2.3.0.0")>

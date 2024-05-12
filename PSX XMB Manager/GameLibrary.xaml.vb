@@ -2,10 +2,11 @@
 Imports System.IO
 Imports System.Windows.Forms
 Imports System.Windows.Threading
-Imports PSX_XMB_Manager.PartitionManager
+Imports PSX_XMB_Manager.Structs
 
 Public Class GameLibrary
 
+    Public MountedDrive As MountedPSXDrive
     Dim WithEvents HDLDump As New Process()
     Dim WithEvents HDLDump2 As New Process()
 
@@ -35,7 +36,6 @@ Public Class GameLibrary
     'Selected game context menu (PSX)
     Dim WithEvents PSXPS2GamesContextMenu As New Controls.ContextMenu()
     Dim WithEvents ModifyPartitionMenuItem As New Controls.MenuItem() With {.Header = "Modify game partition", .Icon = New Controls.Image() With {.Source = New BitmapImage(New Uri("/Images/send-icon.png", UriKind.Relative))}}
-    'Dim WithEvents DumpGameMenuItem As New Controls.MenuItem() With {.Header = "Dump game into ISO file", .Icon = New Controls.Image() With {.Source = New BitmapImage(New Uri("/Images/send-icon.png", UriKind.Relative))}}
     Dim WithEvents RemoveMenuItem As New Controls.MenuItem() With {.Header = "Remove", .Icon = New Controls.Image() With {.Source = New BitmapImage(New Uri("/Images/send-icon.png", UriKind.Relative))}}
 
     Private Sub GameLibrary_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -124,6 +124,17 @@ Public Class GameLibrary
 
                 If Utils.IsURLValid("https://psxdatacenter.com/psx2/games2/" + GameID + ".html") Then
                     URLs.Add("https://psxdatacenter.com/psx2/games2/" + GameID + ".html")
+                ElseIf Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
+                    Dispatcher.BeginInvoke(Sub()
+                                               Dim TempBitmapImage = New BitmapImage()
+                                               TempBitmapImage.BeginInit()
+                                               TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                               TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                               TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg", UriKind.RelativeOrAbsolute)
+                                               TempBitmapImage.EndInit()
+                                               NewPS2Game.GameCoverSource = TempBitmapImage
+                                           End Sub)
+                    NewPS2Game.GameTitle = GetGameTitleFromDatabaseList(GameID)
                 Else
                     Dispatcher.BeginInvoke(Sub()
                                                NewPS2Game.GameCoverSource = New BitmapImage(New Uri("/Images/blankcover.png", UriKind.RelativeOrAbsolute))
@@ -143,7 +154,7 @@ Public Class GameLibrary
     End Sub
 
     Private Sub GameLoaderWorker_RunWorkerCompleted(sender As Object, e As RunWorkerCompletedEventArgs) Handles GameLoaderWorker.RunWorkerCompleted
-        NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available infos with covers"
+        NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available infos with missing covers"
         NewLoadingWindow.LoadProgressBar.Value = 0
         NewLoadingWindow.LoadProgressBar.Maximum = URLs.Count
 
@@ -155,7 +166,6 @@ Public Class GameLibrary
     End Sub
 
     Private Sub PSXDatacenterBrowser_DocumentCompleted(sender As Object, e As WebBrowserDocumentCompletedEventArgs) Handles PSXDatacenterBrowser.DocumentCompleted
-        On Error Resume Next
         RemoveHandler PSXDatacenterBrowser.DocumentCompleted, AddressOf PSXDatacenterBrowser_DocumentCompleted
 
         Dim GameTitle As String = ""
@@ -171,82 +181,102 @@ Public Class GameLibrary
         Dim GamePublisherWebsite As String = ""
 
         'Get game infos
-        Dim infoTable As HtmlElement = PSXDatacenterBrowser.Document.GetElementById("table4")
-        Dim infoRows As HtmlElementCollection = PSXDatacenterBrowser.Document.GetElementsByTagName("tr")
+        Dim InfoRows As HtmlElementCollection = PSXDatacenterBrowser.Document.GetElementsByTagName("tr")
+        If InfoRows.Count > 10 Then
 
-        'Game Title
-        If infoRows.Item(4).InnerText IsNot Nothing Then
-            GameTitle = infoRows.Item(4).InnerText.Split(New String() {"OFFICIAL TITLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
-        End If
-
-        'Game ID
-        If infoRows.Item(6).InnerText IsNot Nothing Then
-            GameID = infoRows.Item(6).InnerText.Split(New String() {"SERIAL NUMBER(S) "}, StringSplitOptions.RemoveEmptyEntries)(0)
-        End If
-
-        'Region
-        If infoRows.Item(7).InnerText IsNot Nothing Then
-            Dim Region As String = infoRows.Item(7).InnerText.Split(New String() {"REGION "}, StringSplitOptions.RemoveEmptyEntries)(0)
-            Select Case Region
-                Case "PAL"
-                    GameRegion = "Europe"
-                Case "NTSC-U"
-                    GameRegion = "US"
-                Case "NTSC-J"
-                    GameRegion = "Japan"
-            End Select
-        End If
-
-        'Genre
-        If infoRows.Item(8).InnerText IsNot Nothing Then
-            GameGenre = infoRows.Item(8).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
-        End If
-
-        'Developer
-        If infoRows.Item(9).InnerText IsNot Nothing Then
-            GameDeveloper = infoRows.Item(9).InnerText.Split(New String() {"DEVELOPER "}, StringSplitOptions.RemoveEmptyEntries)(0)
-        End If
-
-        'Publisher
-        If infoRows.Item(10).InnerText IsNot Nothing Then
-            GamePublisher = infoRows.Item(10).InnerText.Split(New String() {"PUBLISHER "}, StringSplitOptions.RemoveEmptyEntries)(0)
-
-            If GamePublisher.Contains("2K") Then
-                GamePublisherWebsite = "https://2k.com/"
-            ElseIf GamePublisher.Contains("Activision") Then
-                GamePublisherWebsite = "https://www.activision.com/"
-            ElseIf GamePublisher.Contains("Bandai") Then
-                GamePublisherWebsite = "http://www.bandai.com/"
-            ElseIf GamePublisher.Contains("Capcom") Then
-                GamePublisherWebsite = "http://www.capcom.com/"
-            ElseIf GamePublisher.Contains("Electronic Arts") Then
-                GamePublisherWebsite = "http://ea.com/"
-            ElseIf GamePublisher.Contains("EA Sports") Then
-                GamePublisherWebsite = "https://www.easports.com/"
-            ElseIf GamePublisher.Contains("Konami") Then
-                GamePublisherWebsite = "https://www.konami.com/"
-            ElseIf GamePublisher.Contains("Rockstar Games") Then
-                GamePublisherWebsite = "https://www.rockstargames.com/"
-            ElseIf GamePublisher.Contains("Sega") Then
-                GamePublisherWebsite = "http://sega.com/"
-            ElseIf GamePublisher.Contains("Sony Computer Entertainment") Then
-                GamePublisherWebsite = "https://www.sie.com/en/index.html"
-            ElseIf GamePublisher.Contains("THQ") Then
-                GamePublisherWebsite = "https://www.thqnordic.com/"
-            ElseIf GamePublisher.Contains("Ubisoft") Then
-                GamePublisherWebsite = "https://www.ubisoft.com/"
+            'Game Title
+            If InfoRows.Item(4).InnerText IsNot Nothing Then
+                GameTitle = InfoRows.Item(4).InnerText.Split(New String() {"OFFICIAL TITLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
             End If
-        End If
 
-        'Release Date
-        If infoRows.Item(11).InnerText IsNot Nothing Then
-            GameReleaseDate = infoRows.Item(11).InnerText.Split(New String() {"DATE RELEASED "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            'Game ID
+            If InfoRows.Item(6).InnerText IsNot Nothing Then
+                GameID = InfoRows.Item(6).InnerText.Split(New String() {"SERIAL NUMBER(S) "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            End If
+
+            'Region
+            If InfoRows.Item(7).InnerText IsNot Nothing Then
+                Dim Region As String = InfoRows.Item(7).InnerText.Split(New String() {"REGION "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                Select Case Region
+                    Case "PAL"
+                        GameRegion = "Europe"
+                    Case "NTSC-U"
+                        GameRegion = "US"
+                    Case "NTSC-J"
+                        GameRegion = "Japan"
+                End Select
+            End If
+
+            'Genre
+            If InfoRows.Item(8).InnerText IsNot Nothing Then
+                GameGenre = InfoRows.Item(8).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            End If
+
+            'Developer
+            If InfoRows.Item(9).InnerText IsNot Nothing Then
+                GameDeveloper = InfoRows.Item(9).InnerText.Split(New String() {"DEVELOPER "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            End If
+
+            'Publisher
+            If InfoRows.Item(10).InnerText IsNot Nothing Then
+                GamePublisher = InfoRows.Item(10).InnerText.Split(New String() {"PUBLISHER "}, StringSplitOptions.RemoveEmptyEntries)(0)
+
+                If GamePublisher.Contains("2K") Then
+                    GamePublisherWebsite = "https://2k.com/"
+                ElseIf GamePublisher.Contains("Activision") Then
+                    GamePublisherWebsite = "https://www.activision.com/"
+                ElseIf GamePublisher.Contains("Bandai") Then
+                    GamePublisherWebsite = "http://www.bandai.com/"
+                ElseIf GamePublisher.Contains("Capcom") Then
+                    GamePublisherWebsite = "http://www.capcom.com/"
+                ElseIf GamePublisher.Contains("Electronic Arts") Then
+                    GamePublisherWebsite = "http://ea.com/"
+                ElseIf GamePublisher.Contains("EA Sports") Then
+                    GamePublisherWebsite = "https://www.easports.com/"
+                ElseIf GamePublisher.Contains("Konami") Then
+                    GamePublisherWebsite = "https://www.konami.com/"
+                ElseIf GamePublisher.Contains("Rockstar Games") Then
+                    GamePublisherWebsite = "https://www.rockstargames.com/"
+                ElseIf GamePublisher.Contains("Sega") Then
+                    GamePublisherWebsite = "http://sega.com/"
+                ElseIf GamePublisher.Contains("Sony Computer Entertainment") Then
+                    GamePublisherWebsite = "https://www.sie.com/en/index.html"
+                ElseIf GamePublisher.Contains("THQ") Then
+                    GamePublisherWebsite = "https://www.thqnordic.com/"
+                ElseIf GamePublisher.Contains("Ubisoft") Then
+                    GamePublisherWebsite = "https://www.ubisoft.com/"
+                End If
+            End If
+
+            'Release Date
+            If InfoRows.Item(11).InnerText IsNot Nothing Then
+                GameReleaseDate = InfoRows.Item(11).InnerText.Split(New String() {"DATE RELEASED "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            End If
+
         End If
 
         'Get the game cover
         If PSXDatacenterBrowser.Document.GetElementById("table2") IsNot Nothing Then
             GameCoverURL = PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")
-            GameCoverImage = New BitmapImage(New Uri(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")))
+
+            Dim TempBitmapImage = New BitmapImage()
+            TempBitmapImage.BeginInit()
+            TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+            TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+            TempBitmapImage.UriSource = New Uri(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src"), UriKind.RelativeOrAbsolute)
+            TempBitmapImage.EndInit()
+            GameCoverImage = TempBitmapImage
+
+        ElseIf Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
+            Dispatcher.BeginInvoke(Sub()
+                                       Dim TempBitmapImage = New BitmapImage()
+                                       TempBitmapImage.BeginInit()
+                                       TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                       TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                       TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg", UriKind.RelativeOrAbsolute)
+                                       TempBitmapImage.EndInit()
+                                       GameCoverImage = TempBitmapImage
+                                   End Sub)
         End If
 
         'Get the game description
@@ -255,10 +285,9 @@ Public Class GameLibrary
         End If
 
         'Add the infos to the game
-        If Not GameID = "" Then
+        If Not String.IsNullOrEmpty(GameID) Then
             For Each Game In GamesListView.Items
                 Dim FoundGame As PS2Game = CType(Game, PS2Game)
-
                 If FoundGame.GameID.Contains(GameID) Or FoundGame.GameID = GameID Then
                     FoundGame.GameTitle = GameTitle
                     FoundGame.GameRegion = GameRegion
@@ -288,14 +317,13 @@ Public Class GameLibrary
             NewLoadingWindow.Close()
             GamesListView.Items.Refresh()
         End If
-
     End Sub
 
     Private Sub LoadGamePartitions()
         'HDL TOC of the PSX HDD
         HDLDump = New Process()
         HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-        HDLDump.StartInfo.Arguments = "hdl_toc " + NewMainWindow.MountedDrive.HDLDriveName
+        HDLDump.StartInfo.Arguments = "hdl_toc " + MountedDrive.HDLDriveName
         HDLDump.StartInfo.RedirectStandardOutput = True
         AddHandler HDLDump.OutputDataReceived, AddressOf OutputDataHandler
         HDLDump.StartInfo.UseShellExecute = False
@@ -308,7 +336,7 @@ Public Class GameLibrary
         'TOC of the PSX HDD
         HDLDump2 = New Process()
         HDLDump2.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-        HDLDump2.StartInfo.Arguments = "toc " + NewMainWindow.MountedDrive.HDLDriveName
+        HDLDump2.StartInfo.Arguments = "toc " + MountedDrive.HDLDriveName
         HDLDump2.StartInfo.RedirectStandardOutput = True
         AddHandler HDLDump2.OutputDataReceived, AddressOf FullOutputDataHandler
         HDLDump2.StartInfo.UseShellExecute = False
@@ -377,7 +405,7 @@ Public Class GameLibrary
             For Each Part As Partition In Partitions
                 If Part.Name.StartsWith("PP." + SelectedGameToModify.GameID) Then
                     'Mount the partition as volume
-                    MountPartition(Part.Name, NewMainWindow.MountedDrive.DriveID, SelectedGameToModify.GameTitle)
+                    MountPartition(Part.Name, MountedDrive.DriveID, SelectedGameToModify.GameTitle)
                     Exit For
                 End If
             Next
@@ -408,7 +436,7 @@ Public Class GameLibrary
 
                 'Set rmpart command
                 Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\rmpart.txt", False)
-                    CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
+                    CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
                     CommandFileWriter.WriteLine("rmpart " + GamePPPartition)
                     CommandFileWriter.WriteLine("exit")
                 End Using
@@ -442,7 +470,7 @@ Public Class GameLibrary
 
                 'Set rmpart command
                 Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\rmpart.txt", False)
-                    CommandFileWriter.WriteLine("device " + NewMainWindow.MountedDrive.DriveID)
+                    CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
                     CommandFileWriter.WriteLine("rmpart " + HiddenGamePartition)
                     CommandFileWriter.WriteLine("exit")
                 End Using
@@ -520,7 +548,7 @@ Public Class GameLibrary
             If String.IsNullOrEmpty(SelectedGameToModify.AssignedPartitionDriveLetter) Then
                 MsgBox("Could not mount the selected game.", MsgBoxStyle.Exclamation, "Game partition not found.")
             Else
-                Dim NewGamePartitionManager As New GamePartitionManager With {.ShowActivated = True, .AssociatedDriveLetter = SelectedGameToModify.AssignedPartitionDriveLetter, .AssociatedPartition = SelectedGameToModify.PartitionName}
+                Dim NewGamePartitionManager As New GamePartitionManager With {.ShowActivated = True, .AssociatedDriveLetter = SelectedGameToModify.AssignedPartitionDriveLetter, .AssociatedPartition = SelectedGameToModify.PartitionName, .MountedDrive = MountedDrive}
                 NewGamePartitionManager.Show()
             End If
 
@@ -591,7 +619,7 @@ Public Class GameLibrary
         GameIDTextBlock.Text = ""
         GamePartitionsCount = 0
 
-        If NewMainWindow.MountedDrive.HDLDriveName = "" Then
+        If MountedDrive.HDLDriveName = "" Then
             MsgBox("Please connect to the NBD server first.", MsgBoxStyle.Information)
         Else
             CurrentDirectoryTextBlock.Text = "PSX HDD"
