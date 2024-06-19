@@ -2,7 +2,7 @@
 A tool that helps to install PS2 homebrew, games and PS1 games on the internal HDD of the PSX DVR (DESR).</br>
 The installed game or homebrew will show up on the XMB where you can start it like on the PS3.</br>
 
-<img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/82feae61-3cf9-44f2-b6f3-65d1789f9a80">
+<img width="648" alt="psx-xmb-manager-v3" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/2cd13f50-3bfe-44cf-a00f-2bbf6c6f81f4">
 
 ## Features
 - Install PS2 homebrew and games on the internal PSX HDD
