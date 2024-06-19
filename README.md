@@ -21,7 +21,7 @@ The installed game or homebrew will show up on the XMB where you can start it li
   - Translate .dic & .xml files automatically in most languages
 
 ## Notes
-- Requires FMCB installed on your memory card and Open PS2 Loader (to load games)
+- Requires FMCB installed on your memory card and Open PS2 Loader (to load PS2 games)
   - Installation Guide: [https://www.youtube.com/watch?v=9SU594F0pYc](https://www.youtube.com/watch?v=9SU594F0pYc)
   - Modified Open PS2 Loader: [https://github.com/SvenGDK/Open-PS2-Loader](https://github.com/SvenGDK/Open-PS2-Loader)
   - Do not forget to place/replace OPNPS2LD.ELF in the OPL+ partition
