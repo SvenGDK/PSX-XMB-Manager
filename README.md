@@ -1,30 +1,36 @@
 # PSX XMB Manager
-A tool that helps to install PS2 homebrew and games on the internal HDD of the PSX DVR (DESR).</br>
+A tool that helps to install PS2 homebrew, games and PS1 games on the internal HDD of the PSX DVR (DESR).</br>
 The installed game or homebrew will show up on the XMB where you can start it like on the PS3.</br>
 
 <img width="591" alt="Untitled" src="https://github.com/SvenGDK/PSX-XMB-Manager/assets/84620/82feae61-3cf9-44f2-b6f3-65d1789f9a80">
 
 ## Features
 - Install PS2 homebrew and games on the internal PSX HDD
+- Install PS1 games on the internal PSX HDD
 - Backup manager for PS2 games on PC & installed games on the PSX HDD (Game Library)
-  - A right click on a (local) game will give you the possibility to quickly create a game project for the PSX.
-- Mount games from PSX HDD and modify/update the partition header
+  - A right click on a (local) game will give you the possibility to quickly create a PS2 game project for the PSX.
+- Backup manager for PS1 games on PC (Game Library)
+  - A right click on a game will give you the possibility to quickly create a PS1 game project for the PSX.
+- Mount PS2 games from PSX HDD and modify/update the partition header
   - Change game properties / Update OPL-Launcher
 - HDD Partition Manager (Create partition, Remove partition (destructive), Change partition visibility)
-- Game Partition Manager (Dump partition header, Change game title, flags, DMA)
+- PS2 Game Partition Manager (Dump partition header, Change game title, flags, DMA)
+- XMB Files Explorer (XMB Tools)
+  - Open a _system or xosd folder to load, view and edit its content
+  - Text Editor for .xml & .dic files with syntax highlighting
+  - Translate .dic & .xml files automatically in most languages
 
 ## Notes
 - Requires FMCB installed on your memory card and Open PS2 Loader (to load games)
   - Installation Guide: [https://www.youtube.com/watch?v=9SU594F0pYc](https://www.youtube.com/watch?v=9SU594F0pYc)
   - Modified Open PS2 Loader: [https://github.com/SvenGDK/Open-PS2-Loader](https://github.com/SvenGDK/Open-PS2-Loader)
   - Do not forget to place/replace OPNPS2LD.ELF in the OPL+ partition
-- "XMB Tools" will be available on a later release.
+- Requires POPStarter installed for PS1 games
+  - Installation Guide: [https://bitbucket.org/ShaolinAssassin/popstarter-documentation-stuff/wiki/quickstart-hdd](https://bitbucket.org/ShaolinAssassin/popstarter-documentation-stuff/wiki/quickstart-hdd)
 - It is not recommended to abort an installation within the first 3%, this could corrupt your HDD. The same goes for the last percentages of the installation.
 - Only connect your PSX's HDD locally if you know how to and never initialize it on Windows !
 
 ## Required Drivers
-PSX XMB Manager v1 - v2.2.1 (only) requires [NBD 0.5.0-15 + Dokan Driver 0x190](https://github.com/SvenGDK/PSX-XMB-Manager/releases/download/v2.2.1/NBD.0.5.0-15.+.Dokan.Driver.0x190.7z) (install both and reboot).
-
 (W)NBD
 - To connect to the NBD server of your PSX you will first need an NBD client and driver on your PC:
   - The Ceph MSI installer bundles a signed version of the WNBD driver. </br>
@@ -35,6 +41,8 @@ PSX XMB Manager v1 - v2.2.1 (only) requires [NBD 0.5.0-15 + Dokan Driver 0x190](
 Dokany
 - Required to mount & modify game partitions on the PSX HDD
 - [https://github.com/dokan-dev/dokany/releases](https://github.com/dokan-dev/dokany/releases)
+
+NOTE: Old builds of PSX XMB Manager v1 - v2.2.1 requires [NBD 0.5.0-15 + Dokan Driver 0x190](https://github.com/SvenGDK/PSX-XMB-Manager/releases/download/v2.2.1/NBD.0.5.0-15.+.Dokan.Driver.0x190.7z) (install both and reboot).
 
 ## Creating a new project
 - Go to Projects -> New -> You can choose here between a game or homebrew (app) project
@@ -58,12 +66,11 @@ Dokany
 - Connect to your PSX
 - Select a prepared project from the list and hit "Install on PSX"
 - After confirming with "yes" the installation process will begin
-  - Note: If you install a game over NBD, this process can take up to 1-2 hours depending on game size. </br>
-  Homebrew should be installed in some minutes.
+  - Note for PS2 games: This process can take up to 1-2 hours depending on game size when using NBD. </br>
+  Homebrew however should be installed in some minutes.
 - Guides:
   - Homebrew: https://www.youtube.com/watch?v=PClmQXc1ytg
   - Games: https://www.youtube.com/watch?v=wmTmhG1yrl0&t=4s
-
 
 ## Used tools from other developers
 | Tool | Developer |
