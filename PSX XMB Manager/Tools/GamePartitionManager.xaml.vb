@@ -444,6 +444,7 @@ Public Class GamePartitionManager
                 Directory.Delete(TempDirectory, True)
             End If
 
+            Mouse.SetCursor(Input.Cursors.Arrow)
             Exit Sub
         End If
 

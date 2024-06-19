@@ -75,8 +75,23 @@
     <ApplicationIcon>newicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>..\..\..\..\Desktop\Debug\HtmlAgilityPack.dll</HintPath>
+    </Reference>
+    <Reference Include="ICSharpCode.AvalonEdit, Version=6.3.0.90, Culture=neutral, PublicKeyToken=9cc39be672370310, processorArchitecture=MSIL">
+      <HintPath>..\packages\AvalonEdit.6.3.0.90\lib\net462\ICSharpCode.AvalonEdit.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="nQuant.Core, Version=1.0.3.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\nQuant.1.0.3\lib\net40\nQuant.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="PARAM.SFO">
+      <HintPath>..\..\..\..\Desktop\Debug\PARAM.SFO.dll</HintPath>
+    </Reference>
+    <Reference Include="PS4_Tools">
+      <HintPath>..\..\..\..\Desktop\Debug\PS4_Tools.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -93,71 +108,125 @@
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="Xceed.Wpf.AvalonDock, Version=4.6.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Extended.Wpf.Toolkit.4.6.0\lib\net40\Xceed.Wpf.AvalonDock.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Aero, Version=4.6.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Extended.Wpf.Toolkit.4.6.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.Aero.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Metro, Version=4.6.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Extended.Wpf.Toolkit.4.6.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.Metro.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.VS2010, Version=4.6.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Extended.Wpf.Toolkit.4.6.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.VS2010.dll</HintPath>
+    </Reference>
+    <Reference Include="Xceed.Wpf.Toolkit, Version=4.6.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Extended.Wpf.Toolkit.4.6.0\lib\net40\Xceed.Wpf.Toolkit.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="Application.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="ComboBoxProjectItem.vb" />
-    <Compile Include="GameLibrary.xaml.vb">
+    <Compile Include="Classes\ComboBoxProjectItem.vb" />
+    <Compile Include="Classes\ImageUtils.vb" />
+    <Compile Include="Classes\PS1Game.vb" />
+    <Compile Include="Classes\Translations.vb" />
+    <Compile Include="Game\NewPS1GameProject.xaml.vb">
+      <DependentUpon>NewPS1GameProject.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Game\PS1GameEditor.xaml.vb">
+      <DependentUpon>PS1GameEditor.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="InstallWindow.xaml.vb">
+      <DependentUpon>InstallWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Tools\GameLibrary.xaml.vb">
       <DependentUpon>GameLibrary.xaml</DependentUpon>
     </Compile>
-    <Compile Include="GamePartitionManager.xaml.vb">
+    <Compile Include="Tools\GamePartitionManager.xaml.vb">
       <DependentUpon>GamePartitionManager.xaml</DependentUpon>
     </Compile>
-    <Compile Include="NewAppProject.xaml.vb">
+    <Compile Include="Homebrew\NewAppProject.xaml.vb">
       <DependentUpon>NewAppProject.xaml</DependentUpon>
     </Compile>
-    <Compile Include="NewGameProject.xaml.vb">
+    <Compile Include="Game\NewGameProject.xaml.vb">
       <DependentUpon>NewGameProject.xaml</DependentUpon>
     </Compile>
     <Compile Include="NewMainWindow.xaml.vb">
       <DependentUpon>NewMainWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="NewPartition.xaml.vb">
+    <Compile Include="Tools\NewPartition.xaml.vb">
       <DependentUpon>NewPartition.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PartitionManager.xaml.vb">
+    <Compile Include="Tools\PartitionManager.xaml.vb">
       <DependentUpon>PartitionManager.xaml</DependentUpon>
     </Compile>
-    <Compile Include="PS2Game.vb" />
-    <Compile Include="Structs.vb" />
+    <Compile Include="Classes\PS2Game.vb" />
+    <Compile Include="Classes\Structs.vb" />
     <Compile Include="SyncWindow.xaml.vb">
       <DependentUpon>SyncWindow.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Utils.vb" />
-    <Page Include="AppEditor.xaml">
+    <Compile Include="Classes\Utils.vb" />
+    <Compile Include="Tools\PS1GameLibrary.xaml.vb">
+      <DependentUpon>PS1GameLibrary.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="XMB\AdvancedEditor.xaml.vb">
+      <DependentUpon>AdvancedEditor.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="XMB\AssetsBrowser.xaml.vb">
+      <DependentUpon>AssetsBrowser.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="XMB\ColorSelection.xaml.vb">
+      <DependentUpon>ColorSelection.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="XMB\SimpleGraphicsEditor.xaml.vb">
+      <DependentUpon>SimpleGraphicsEditor.xaml</DependentUpon>
+    </Compile>
+    <Page Include="Game\NewPS1GameProject.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="GameEditor.xaml">
+    <Page Include="Game\PS1GameEditor.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="GameLibrary.xaml">
+    <Page Include="Homebrew\AppEditor.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="GamePartitionManager.xaml">
+    <Page Include="Game\GameEditor.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Compile Include="AppEditor.xaml.vb">
+    <Page Include="InstallWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tools\GameLibrary.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Tools\GamePartitionManager.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Compile Include="Homebrew\AppEditor.xaml.vb">
       <DependentUpon>AppEditor.xaml</DependentUpon>
     </Compile>
     <Compile Include="Application.xaml.vb">
       <DependentUpon>Application.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="GameEditor.xaml.vb">
+    <Compile Include="Game\GameEditor.xaml.vb">
       <DependentUpon>GameEditor.xaml</DependentUpon>
     </Compile>
-    <Page Include="NewAppProject.xaml">
+    <Page Include="Homebrew\NewAppProject.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="NewGameProject.xaml">
+    <Page Include="Game\NewGameProject.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -165,17 +234,37 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="NewPartition.xaml">
+    <Page Include="Tools\NewPartition.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="PartitionManager.xaml">
+    <Page Include="Tools\PartitionManager.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="SyncWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Tools\PS1GameLibrary.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="XMB\AdvancedEditor.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="XMB\AssetsBrowser.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="XMB\ColorSelection.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="XMB\SimpleGraphicsEditor.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
@@ -220,6 +309,7 @@
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
       <CustomToolNamespace>My.Resources</CustomToolNamespace>
     </EmbeddedResource>
+    <EmbeddedResource Include="DIC.xshd" />
     <None Include="My Project\app.manifest" />
     <None Include="My Project\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -245,5 +335,35 @@
   <ItemGroup>
     <Resource Include="newicon.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Font-File.png" />
+    <Resource Include="Images\Image-File.png" />
+    <Resource Include="Images\Movie-File.png" />
+    <Resource Include="Images\Music-File.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\DIC-File.png" />
+    <Resource Include="Images\XML-File.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Folder-Open.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Image-Edit.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\color-picker.cur" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\Replace-File.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Images\BlankPS1Cover.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+	<Target Name="RemoveSatelliteAssemblies" AfterTargets="ResolveAssemblyReferences">
+		<ItemGroup>
+			<ReferenceCopyLocalPaths Remove="@(ReferenceSatellitePaths)" />
+		</ItemGroup>
+	</Target>
 </Project>

@@ -1,8 +1,8 @@
 ﻿<Application x:Class="Application"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:PSX_XMB_Manager"
-    StartupUri="NewMainWindow.xaml">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:PSX_XMB_Manager"
+             StartupUri="NewMainWindow.xaml">
     <Application.Resources>
         
     </Application.Resources>

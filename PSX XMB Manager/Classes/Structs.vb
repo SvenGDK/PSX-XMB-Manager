@@ -173,4 +173,57 @@
 
     End Structure
 
+    Public Enum AssetType
+        Audio
+        DIC
+        Font
+        Image
+        Video
+        XML
+    End Enum
+
+    Public Structure AssetListViewItem
+        Private _AssetFileName As String
+        Private _AssetFilePath As String
+        Private _Type As AssetType
+        Private _Icon As ImageSource
+
+        Public Property AssetFileName As String
+            Get
+                Return _AssetFileName
+            End Get
+            Set
+                _AssetFileName = Value
+            End Set
+        End Property
+
+        Public Property AssetFilePath As String
+            Get
+                Return _AssetFilePath
+            End Get
+            Set
+                _AssetFilePath = Value
+            End Set
+        End Property
+
+        Public Property Type As AssetType
+            Get
+                Return _Type
+            End Get
+            Set
+                _Type = Value
+            End Set
+        End Property
+
+        Public Property Icon As ImageSource
+            Get
+                Return _Icon
+            End Get
+            Set
+                _Icon = Value
+            End Set
+        End Property
+
+    End Structure
+
 End Class

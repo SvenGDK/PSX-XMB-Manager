@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PSX_XMB_Manager"
         mc:Ignorable="d"
-        Title="Game Library" Height="640" Width="1070" Background="#FF252525" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
+        Title="PS2 Game Library" Height="640" Width="1070" Background="#FF252525" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
     <Grid>
         <Menu x:Name="MainMenu" Background="{x:Null}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="205" Margin="10,0,0,90">
             <MenuItem x:Name="LoadGamesOnPCButton" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="Games on PC" VerticalAlignment="Top" Width="205"/>
@@ -74,12 +74,6 @@
                                     </Track>
                                 </Grid>
                                 <ControlTemplate.Triggers>
-                                    <Trigger SourceName="Thumb" Property="IsMouseOver" Value="true">
-                                        <Setter Value="{DynamicResource ButtonSelectBrush}" TargetName="Thumb" Property="Background" />
-                                    </Trigger>
-                                    <Trigger SourceName="Thumb" Property="IsDragging" Value="true">
-                                        <Setter Value="{DynamicResource DarkBrush}" TargetName="Thumb" Property="Background" />
-                                    </Trigger>
                                     <Trigger Property="IsEnabled" Value="false">
                                         <Setter TargetName="Thumb" Property="Visibility" Value="Collapsed" />
                                     </Trigger>

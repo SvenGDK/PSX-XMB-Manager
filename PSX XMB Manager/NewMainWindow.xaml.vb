@@ -1,24 +1,20 @@
 ﻿Imports System.ComponentModel
 Imports System.IO
 Imports System.Net
-Imports System.Text.RegularExpressions
 Imports System.Windows.Media.Animation
 Imports System.Windows.Threading
 Imports PSX_XMB_Manager.Structs
+Imports PSX_XMB_Manager.Utils
 
 Public Class NewMainWindow
 
     Private MountedDrive As MountedPSXDrive
-
     Private WNBDClientPath As String = ""
-    Private HDLGameID As String = ""
-    Private CurrentProjectDirectory As String = ""
 
-    Private WithEvents HDL_Dump As New Process()
     Private WithEvents ConnectDelay As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(2)}
     Private WithEvents ContentDownloader As New WebClient()
 
-    Private Sub MainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
+    Private Sub NewMainWindow_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
         Title = String.Format("PSX XMB Manager - {0}.{1}.{2}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Application.Info.Version.Build)
 
         If Not Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
@@ -76,27 +72,65 @@ Public Class NewMainWindow
                 End If
             End Using
 
-            'Check if NBD is connected and if the drive is already mounted
-            If IsNBDConnected() Then
+            'Check if NBD is connected or if the HDD is connected locally
+            Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
+            If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then 'NBD
+                MountedDrive.NBDDriveName = ConnectedNBDDriveName
+
+                If PSXIPTextBox.Dispatcher.CheckAccess() = False Then
+                    PSXIPTextBox.Dispatcher.BeginInvoke(Sub()
+                                                            PSXIPTextBox.Text = GetConnectedNBDIP(WNBDClientPath, ConnectedNBDDriveName)
+                                                        End Sub)
+                Else
+                    PSXIPTextBox.Text = GetConnectedNBDIP(WNBDClientPath, ConnectedNBDDriveName)
+                End If
+
+                'Get HDL Drive Name
+                Dim HDLDriveName As String = GetHDLDriveName()
+                If Not String.IsNullOrEmpty(HDLDriveName) Then
+
+                    'Update UI
+                    If MountStatusLabel.CheckAccess() = False Then
+                        MountStatusLabel.Dispatcher.BeginInvoke(Sub()
+                                                                    MountStatusLabel.Text = "On " + HDLDriveName
+                                                                    MountStatusLabel.Foreground = Brushes.Green
+                                                                End Sub)
+                    Else
+                        MountStatusLabel.Text = "On " + HDLDriveName
+                        MountStatusLabel.Foreground = Brushes.Green
+                    End If
+
+                    MountedDrive.HDLDriveName = HDLDriveName
+                End If
+
+                MountedDrive.DriveID = GetHDDID()
+
                 InstallProjectButton.IsEnabled = True
                 NBDConnectionLabel.Text = "Connected"
                 NBDConnectionLabel.Foreground = Brushes.Green
                 ConnectButton.Content = "Disconnect"
 
-            ElseIf IsLocalHDDConnected() Then
+            ElseIf Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
+                Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+                MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
+                MountStatusLabel.Foreground = Brushes.Green
+                MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
+
                 MountedDrive.DriveID = GetHDDID()
 
                 InstallProjectButton.IsEnabled = True
                 NBDConnectionStatusLabel.Text = "Local Connection:"
                 NBDConnectionLabel.Text = "Connected"
 
-                EnterIPLabel.Text = "Local PS2/PSX HDD connected."
+                EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
                 EnterIPLabel.TextAlignment = TextAlignment.Center
-                ConnectButton.Visibility = Visibility.Hidden
-                PSXIPTextBox.Visibility = Visibility.Hidden
+                ConnectButton.IsEnabled = False
+                PSXIPTextBox.IsEnabled = False
+                PSXIPTextBox.Text = "Local Connection"
+                ConnectButton.Foreground = Brushes.Black
 
                 NBDConnectionLabel.Foreground = Brushes.Green
-                ConnectButton.Content = "Disconnect"
+                ConnectButton.Content = "Disabled"
             End If
         End If
 
@@ -137,7 +171,6 @@ Public Class NewMainWindow
                 End Using
             End If
         End If
-
     End Sub
 
     Private Sub NewMainWindow_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
@@ -187,233 +220,6 @@ Public Class NewMainWindow
         End If
     End Sub
 
-    Public Enum DiscType
-        CD
-        DVD
-    End Enum
-
-    Private Function GetDiscType(ISOFile As String) As DiscType
-        Dim ISOFileSize As Double = New FileInfo(ISOFile).Length / 1048576
-
-        If ISOFileSize > 700 Then
-            Return DiscType.DVD
-        Else
-            Return DiscType.CD
-        End If
-    End Function
-
-    Private Function IsNBDConnected() As Boolean
-
-        Dim ProcessOutput As String()
-        Dim NBDDriveName As String = ""
-
-        'List connected clients
-        If Not String.IsNullOrEmpty(WNBDClientPath) Then
-            Using WNBDClient As New Process()
-                WNBDClient.StartInfo.FileName = WNBDClientPath
-                WNBDClient.StartInfo.Arguments = "list"
-                WNBDClient.StartInfo.RedirectStandardOutput = True
-                WNBDClient.StartInfo.UseShellExecute = False
-                WNBDClient.StartInfo.CreateNoWindow = True
-                WNBDClient.Start()
-                WNBDClient.WaitForExit()
-
-                Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-                ProcessOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-            End Using
-
-            For Each ReturnedLine As String In ProcessOutput
-                If ReturnedLine.Contains("wnbd-client") Then
-                    NBDDriveName = ReturnedLine.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4).Trim()
-                    Exit For
-                End If
-            Next
-        End If
-
-        If Not String.IsNullOrEmpty(NBDDriveName) Then
-
-            MountedDrive.NBDDriveName = NBDDriveName
-
-            If PSXIPTextBox.Dispatcher.CheckAccess() = False Then
-                PSXIPTextBox.Dispatcher.BeginInvoke(Sub()
-                                                        PSXIPTextBox.Text = GetConnectedNBDIP(NBDDriveName)
-                                                    End Sub)
-            Else
-                PSXIPTextBox.Text = GetConnectedNBDIP(NBDDriveName)
-            End If
-
-            MountedDrive.HDLDriveName = GetHDLDriveName()
-            MountedDrive.DriveID = GetHDDID()
-
-            Return True
-        Else
-            Return False
-        End If
-
-    End Function
-
-    Private Function IsLocalHDDConnected() As Boolean
-        'Query the drives
-        If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe") Then
-            Using HDLDump As New Process()
-                HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                HDLDump.StartInfo.Arguments = "query"
-                HDLDump.StartInfo.RedirectStandardOutput = True
-                HDLDump.StartInfo.UseShellExecute = False
-                HDLDump.StartInfo.CreateNoWindow = True
-                HDLDump.Start()
-
-                'Read the output
-                Dim OutputReader As StreamReader = HDLDump.StandardOutput
-                Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-
-                Dim DriveHDLName As String = ""
-
-                'Find the local drive
-                For Each Line As String In ProcessOutput
-                    If Not String.IsNullOrWhiteSpace(Line) Then
-                        If Line.Contains("formatted Playstation 2 HDD") Then
-                            'Set the found drive as mounted PSX drive
-                            Dim DriveInfos As String() = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)
-                            If DriveInfos(0) IsNot Nothing Then
-                                DriveHDLName = DriveInfos(0).Trim()
-                                Exit For
-                            End If
-                        End If
-                    End If
-                Next
-
-                If Not String.IsNullOrWhiteSpace(DriveHDLName) Then
-                    MountStatusLabel.Text = "on " + DriveHDLName
-                    MountStatusLabel.Foreground = Brushes.Green
-                    MountedDrive.HDLDriveName = DriveHDLName
-                    Return True
-                Else
-                    Return False
-                End If
-
-            End Using
-        Else
-            Return False
-        End If
-    End Function
-
-    Private Function GetConnectedNBDIP(NBDDriveName As String) As String
-        'Get the connected IP address
-        If Not String.IsNullOrEmpty(WNBDClientPath) Then
-            Dim ProcessOutput As String()
-            Dim NBDIP As String = ""
-
-            Using WNBDClient As New Process()
-                WNBDClient.StartInfo.FileName = WNBDClientPath
-                WNBDClient.StartInfo.Arguments = "show " + NBDDriveName
-                WNBDClient.StartInfo.RedirectStandardOutput = True
-                WNBDClient.StartInfo.UseShellExecute = False
-                WNBDClient.StartInfo.CreateNoWindow = True
-                WNBDClient.Start()
-                WNBDClient.WaitForExit()
-
-                Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-                ProcessOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-            End Using
-
-            For Each ReturnedLine As String In ProcessOutput
-                If ReturnedLine.Contains("Hostname") Then
-                    NBDIP = ReturnedLine.Split(":"c)(1).Trim()
-                    Exit For
-                End If
-            Next
-
-            Return NBDIP
-        Else
-            Return ""
-        End If
-    End Function
-
-    Private Function GetHDLDriveName() As String
-        If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe") Then
-            Dim HDLDriveName As String = ""
-
-            'Query the drives
-            Using HDLDump As New Process()
-                HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                HDLDump.StartInfo.Arguments = "query"
-                HDLDump.StartInfo.RedirectStandardOutput = True
-                HDLDump.StartInfo.UseShellExecute = False
-                HDLDump.StartInfo.CreateNoWindow = True
-                HDLDump.Start()
-                HDLDump.WaitForExit()
-
-                'Read the output
-                Dim OutputReader As StreamReader = HDLDump.StandardOutput
-                Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-
-                'Find the drive
-                For Each Line As String In ProcessOutput
-                    If Not String.IsNullOrWhiteSpace(Line) Then
-                        If Line.Contains("formatted Playstation 2 HDD") Then
-                            'Set the found drive as mounted PSX drive
-                            Dim DriveInfos As String() = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)
-                            HDLDriveName = DriveInfos(0).Trim()
-                            Exit For
-                        End If
-                    End If
-                Next
-            End Using
-
-            'Update UI
-            If Not String.IsNullOrWhiteSpace(HDLDriveName) Then
-                If MountStatusLabel.CheckAccess() = False Then
-                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
-                                                                MountStatusLabel.Text = "On " + HDLDriveName
-                                                                MountStatusLabel.Foreground = Brushes.Green
-                                                            End Sub)
-                Else
-                    MountStatusLabel.Text = "On " + HDLDriveName
-                    MountStatusLabel.Foreground = Brushes.Green
-                End If
-            End If
-
-            Return HDLDriveName
-        Else
-            Return ""
-        End If
-    End Function
-
-    Private Function GetHDDID() As String
-        Dim DriveID As String = ""
-
-        'Query the drives
-        Using WMIC As New Process()
-            WMIC.StartInfo.FileName = "wmic"
-            WMIC.StartInfo.Arguments = "diskdrive get Caption,DeviceID"
-            WMIC.StartInfo.RedirectStandardOutput = True
-            WMIC.StartInfo.UseShellExecute = False
-            WMIC.StartInfo.CreateNoWindow = True
-            WMIC.Start()
-            WMIC.WaitForExit()
-
-            'Read the output
-            Dim OutputReader As StreamReader = WMIC.StandardOutput
-            Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-
-            'Find the drive
-            For Each Line As String In ProcessOutput
-                If Not String.IsNullOrWhiteSpace(Line) Then
-                    If Line.Contains("WNBD WNBD_DISK SCSI Disk Device") Then
-                        DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(5).Trim()
-                        Exit For
-                    ElseIf Line.Contains("Microsoft Virtual Disk") Then 'For testing with local VHD
-                        DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(3).Trim()
-                        Exit For
-                    End If
-                End If
-            Next
-        End Using
-
-        Return DriveID
-    End Function
-
     Public Sub ReloadProjects()
         ProjectListComboBox.Items.Clear()
         PreparedProjectsComboBox.Items.Clear()
@@ -443,7 +249,8 @@ Public Class NewMainWindow
         StartMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF004671"), Color))
         ProjectsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         PartitionManagerMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
-        GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        PS1GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        PS2GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         XMBToolsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         NBDDriverMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
 
@@ -463,7 +270,8 @@ Public Class NewMainWindow
         StartMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         ProjectsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF004671"), Color))
         PartitionManagerMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
-        GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        PS1GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
+        PS2GameLibraryMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         XMBToolsMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
         NBDDriverMenuItem.Background = New SolidColorBrush(CType(ColorConverter.ConvertFromString("#FF00619C"), Color))
 
@@ -487,13 +295,19 @@ Public Class NewMainWindow
         End If
     End Sub
 
-    Private Sub GameLibraryMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles GameLibraryMenuItem.Click
+    Private Sub PS1GameLibraryMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles PS1GameLibraryMenuItem.Click
+        Dim NewGameLibrary As New PS1GameLibrary() With {.ShowActivated = True}
+        NewGameLibrary.Show()
+    End Sub
+
+    Private Sub PS2GameLibraryMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles PS2GameLibraryMenuItem.Click
         Dim NewGameLibrary As New GameLibrary() With {.ShowActivated = True, .MountedDrive = MountedDrive}
         NewGameLibrary.Show()
     End Sub
 
     Private Sub XMBToolsMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles XMBToolsMenuItem.Click
-        MsgBox("XMB Tools are not available yet in this release.", MsgBoxStyle.Information)
+        Dim NewAssetsBrowser As New AssetsBrowser() With {.ShowActivated = True}
+        NewAssetsBrowser.Show()
     End Sub
 
     Private Sub NBDDriverMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NBDDriverMenuItem.Click
@@ -515,6 +329,11 @@ Public Class NewMainWindow
 
     Private Sub NewGameProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewGameProjectButton.Click
         Dim NewGameProjectWindow As New NewGameProject() With {.ShowActivated = True}
+        NewGameProjectWindow.Show()
+    End Sub
+
+    Private Sub NewPS1GameProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles NewPS1GameProjectButton.Click
+        Dim NewGameProjectWindow As New NewPS1GameProject() With {.ShowActivated = True}
         NewGameProjectWindow.Show()
     End Sub
 
@@ -547,22 +366,71 @@ Public Class NewMainWindow
 
                 HomebrewProjectEditor.Show()
             ElseIf ProjectType = "GAME" Then
+                Dim GameType As String = ProjectInfos(6).Split("="c)(1)
                 Dim GameInfos As String() = File.ReadAllLines(ProjectDirectory + "\icon.sys")
-                Dim GameProjectEditor As New NewGameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
 
-                GameProjectEditor.ProjectNameTextBox.Text = ProjectName
-                GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
-                GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
-                GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
-                GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
-                GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
-                GameProjectEditor.ProjectISOFileTextBox.Text = ProjectFile
+                Select Case GameType
+                    Case "PS1"
+                        Dim GameProjectEditor As New NewPS1GameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
+                        GameProjectEditor.ProjectNameTextBox.Text = ProjectName
+                        GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
+                        GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
+                        GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
+                        GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
+                        GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
 
-                If File.Exists(ProjectDirectory + "\list.ico") Then
-                    GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
-                End If
+                        GameProjectEditor.IMAGE0PathTextBox.Text = ProjectFile
+                        GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectFile) + vbCrLf)
 
-                GameProjectEditor.Show()
+                        'Check for multiple images and tick MultiDiscCheckBox if we have at least 2 discs
+                        For Each ProjectFileLine As String In ProjectInfos
+                            If ProjectFileLine.StartsWith("IMAGE1=") Then
+                                GameProjectEditor.IMAGE1PathTextBox.Text = ProjectInfos(7).Split("="c)(1)
+                                GameProjectEditor.MultiDiscCheckBox.IsChecked = True
+                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(7).Split("="c)(1)) + vbCrLf)
+                            End If
+                            If ProjectFileLine.StartsWith("IMAGE2=") Then
+                                GameProjectEditor.IMAGE2PathTextBox.Text = ProjectInfos(8).Split("="c)(1)
+                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(8).Split("="c)(1)) + vbCrLf)
+                            End If
+                            If ProjectFileLine.StartsWith("IMAGE3=") Then
+                                GameProjectEditor.IMAGE3PathTextBox.Text = ProjectInfos(9).Split("="c)(1)
+                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(9).Split("="c)(1)))
+                            End If
+                        Next
+
+                        If File.Exists(ProjectDirectory + "\list.ico") Then
+                            GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                        End If
+
+                        GameProjectEditor.Show()
+                    Case "PS2"
+                        Dim GameProjectEditor As New NewGameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
+                        GameProjectEditor.ProjectNameTextBox.Text = ProjectName
+                        GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
+                        GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
+                        GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
+                        GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
+                        GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
+                        GameProjectEditor.ProjectISOFileTextBox.Text = ProjectFile
+
+                        If File.Exists(ProjectDirectory + "\list.ico") Then
+                            GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                        End If
+
+                        GameProjectEditor.Show()
+                End Select
+            End If
+        End If
+    End Sub
+
+    Private Sub DeleteProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles DeleteProjectButton.Click
+        If ProjectListComboBox.SelectedItem IsNot Nothing Then
+            Dim SelectedProject As ComboBoxProjectItem = CType(ProjectListComboBox.SelectedItem, ComboBoxProjectItem)
+            If File.Exists(SelectedProject.ProjectFile) Then
+                File.Delete(SelectedProject.ProjectFile)
+                ProjectListComboBox.Items.Remove(SelectedProject)
+                ReloadProjects()
             End If
         End If
     End Sub
@@ -592,42 +460,58 @@ Public Class NewMainWindow
                     WrapProcess.Start()
                     WrapProcess.WaitForExit()
 
+                    'Mark project as SIGNED
                     Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
                     ProjectConfigFileLines(5) = "SIGNED=TRUE"
                     File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
 
                     MsgBox("Homebrew Project prepared with success !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
                 Else
-                    If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF") Then
-                        'Copy included OPL-Launcher to project folder
-                        File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF", ProjectDIR + "\EXECUTE.KELF", True)
-                    Else
-                        'OPL-Launcher not found...
-                        Dim HomebrewELF As String = ""
 
-                        HomebrewELF = InputBox("OPL-Launcher has been deleted from the Tools folder." + vbCrLf + "Please enter the full path to the .elf file or leave the URL to download OPL-Launcher.",
-                                                   "Missing file",
-                                                   "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf")
+                    'PS1 games get POPSTARTER and PS2 games get OPL-Launcher
+                    Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
 
-                        If Not String.IsNullOrEmpty(HomebrewELF) Then
-                            If HomebrewELF = "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf" Then
-                                'Download latest OPL-Launcher
-                                ContentDownloader.DownloadFile("https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf", My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf")
+                    Select Case GameType
+                        Case "PS1"
+                            'Copy included POPSTARTER to project folder
+                            If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF") Then
+                                File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF", ProjectDIR + "\EXECUTE.KELF", True) 'Save as EXECUTE.KELF
+                            Else
+                                MsgBox("POPSTARTER.KELF is missing in the Tools directory.", MsgBoxStyle.Critical, "Error setting up the project")
                             End If
-                        Else
-                            MsgBox("Not valid file provided, aborting ...", MsgBoxStyle.Exclamation, "Aborting")
-                            Exit Sub
-                        End If
+                        Case "PS2"
+                            'Copy included OPL-Launcher to project folder
+                            If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF") Then
+                                File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF", ProjectDIR + "\EXECUTE.KELF", True)
+                            Else
+                                'OPL-Launcher not found...
+                                Dim HomebrewELF As String = ""
 
-                        'Wrap OPL-Launcher as EXECUTE.KELF
-                        Dim WrapProcess As New Process()
-                        WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
-                        WrapProcess.StartInfo.Arguments = """" + My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf"" """ + ProjectDIR + "\EXECUTE.KELF"""
-                        WrapProcess.StartInfo.CreateNoWindow = True
-                        WrapProcess.Start()
-                        WrapProcess.WaitForExit()
-                    End If
+                                HomebrewELF = InputBox("OPL-Launcher has been deleted from the Tools folder." + vbCrLf + "Please enter the full path to the .elf file or leave the URL to download OPL-Launcher.",
+                                                           "Missing file",
+                                                           "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf")
 
+                                If Not String.IsNullOrEmpty(HomebrewELF) Then
+                                    If HomebrewELF = "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf" Then
+                                        'Download latest OPL-Launcher
+                                        ContentDownloader.DownloadFile("https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf", My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf")
+                                    End If
+                                Else
+                                    MsgBox("Not valid file provided, aborting ...", MsgBoxStyle.Exclamation, "Aborting")
+                                    Exit Sub
+                                End If
+
+                                'Wrap OPL-Launcher as EXECUTE.KELF
+                                Dim WrapProcess As New Process()
+                                WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
+                                WrapProcess.StartInfo.Arguments = """" + My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf"" """ + ProjectDIR + "\EXECUTE.KELF"""
+                                WrapProcess.StartInfo.CreateNoWindow = True
+                                WrapProcess.Start()
+                                WrapProcess.WaitForExit()
+                            End If
+                    End Select
+
+                    'Mark project as SIGNED
                     Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
                     ProjectConfigFileLines(5) = "SIGNED=TRUE"
                     File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
@@ -650,16 +534,27 @@ Public Class NewMainWindow
 
                     'Identify project type
                     Dim ProjectType As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
-
-                    'Show progress
-                    ProgressGrid.Visibility = Visibility.Visible
+                    Dim NewInstallWindow As New InstallWindow() With {.ProjectToInstall = SelectedProject, .MountedDrive = MountedDrive, .Title = "Installing " + ProjectTitle}
 
                     If ProjectType = "APP" Then
-                        StatusLabel.Text = "Installing Homebrew, please wait..."
-                        InstallApp()
+                        NewInstallWindow.InstallStatus = "Installing Homebrew, please wait..."
+                        NewInstallWindow.InstallApp()
+
+                        NewInstallWindow.ShowDialog()
                     ElseIf ProjectType = "GAME" Then
-                        StatusLabel.Text = "Installing Game, please wait..."
-                        InstallGame()
+                        Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
+
+                        Select Case GameType
+                            Case "PS1"
+                                NewInstallWindow.InstallStatus = "Installing PS1 Game, do not close when it freezes or hangs."
+                                NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
+                                NewInstallWindow.InstallForPS2 = False
+                            Case "PS2"
+                                NewInstallWindow.InstallStatus = "Installing PS2 Game, please wait..."
+                                NewInstallWindow.InstallForPS2 = True
+                        End Select
+
+                        NewInstallWindow.ShowDialog()
                     End If
 
                 Else
@@ -676,438 +571,68 @@ Public Class NewMainWindow
 
 #End Region
 
-    Public Sub LockUI()
-        If MainMenu.IsEnabled Then
-            MainMenu.IsEnabled = False
-            ProjectsGrid.IsEnabled = False
-        Else
-            MainMenu.IsEnabled = True
-            ProjectsGrid.IsEnabled = True
-        End If
-    End Sub
+    Private Sub ConnectDelay_Tick(sender As Object, e As EventArgs) Handles ConnectDelay.Tick
+        'Get drive properties after the connect delay
+        Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
+        If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then
+            MountedDrive.NBDDriveName = ConnectedNBDDriveName
 
-    Private Sub InstallApp()
-        'Check if drive is already identified, if not get the drive name
-        If String.IsNullOrEmpty(MountedDrive.HDLDriveName) Then
-            MountedDrive.HDLDriveName = GetHDLDriveName()
-            'Retry
-            InstallApp()
-        Else
-            If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
-                'Proceed to installation on HDD
-                Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
-                Dim HomebrewTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
-                Dim HomebrewELF As String = File.ReadAllLines(SelectedProject.ProjectFile)(3).Split("="c)(1)
-                Dim HomebrewPartition As String
+            'Get HDL Drive Name
+            Dim HDLDriveName As String = GetHDLDriveName()
+            If Not String.IsNullOrEmpty(HDLDriveName) Then
 
-                CurrentProjectDirectory = File.ReadAllLines(SelectedProject.ProjectFile)(2).Split("="c)(1)
-
-                If HomebrewTitle.Contains("Open PS2 Loader") Or HomebrewTitle.Contains("OPL") Then
-                    HomebrewPartition = "PP.APPS-00001..OPL"
-                ElseIf HomebrewTitle.Contains("LaunchELF") Or HomebrewTitle.Contains("uLE") Or HomebrewTitle.Contains("wLE") Then
-                    HomebrewPartition = "PP.APPS-00002..WLE"
-                ElseIf HomebrewTitle.Contains("hdl_srv") Or HomebrewTitle.Contains("hdl_server") Or HomebrewTitle.Contains("hdl server") Then
-                    HomebrewPartition = "PP.APPS-00003..HDL"
-                ElseIf HomebrewTitle.Contains("SMS") Or HomebrewTitle.Contains("Simple Media System") Then
-                    HomebrewPartition = "PP.APPS-00004..SMS"
-                ElseIf HomebrewTitle.Contains("GSM") Then
-                    HomebrewPartition = "PP.APPS-00005..GSM"
+                'Update UI
+                If MountStatusLabel.CheckAccess() = False Then
+                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
+                                                                MountStatusLabel.Text = "On " + HDLDriveName
+                                                                MountStatusLabel.Foreground = Brushes.Green
+                                                            End Sub)
                 Else
-                    HomebrewPartition = InputBox("Please enter a valid partition name:", "Could not determine partition for this homebrew.", "PP.APPS-00001..TITLE")
+                    MountStatusLabel.Text = "On " + HDLDriveName
+                    MountStatusLabel.Foreground = Brushes.Green
                 End If
 
-                StatusLabel.Text = "Creating partition, please wait..."
-
-                If Not String.IsNullOrEmpty(HomebrewPartition) Then
-                    LockUI()
-                    CreateHomebrewPartition(HomebrewPartition)
-                Else
-                    MsgBox("Partition name cannot be empty! Please try again.", MsgBoxStyle.Exclamation, "Error")
-                    Exit Sub
-                End If
-            End If
-        End If
-    End Sub
-
-    Private Sub InstallGame()
-        'Check if drive is already identified, if not get the drive name
-        If MountedDrive.HDLDriveName = "" Then
-            MountedDrive.HDLDriveName = GetHDLDriveName()
-            'Retry
-            InstallGame()
-        Else
-            If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
-                'Proceed to installation on HDD
-                Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
-                Dim GameTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
-                Dim GameID As String = File.ReadAllLines(SelectedProject.ProjectFile)(1).Split("="c)(1)
-                Dim GameISO As String = File.ReadAllLines(SelectedProject.ProjectFile)(3).Split("="c)(1)
-
-                HDLGameID = File.ReadAllLines(SelectedProject.ProjectFile)(1).Split("="c)(1).Replace("_", "-").Replace(".", "").Trim()
-                CurrentProjectDirectory = File.ReadAllLines(SelectedProject.ProjectFile)(2).Split("="c)(1)
-
-                HDL_Dump = New Process()
-                HDL_Dump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-                HDL_Dump.StartInfo.RedirectStandardOutput = True
-                AddHandler HDL_Dump.OutputDataReceived, AddressOf HDLDumpOutputDataHandler
-                HDL_Dump.StartInfo.UseShellExecute = False
-                HDL_Dump.StartInfo.CreateNoWindow = True
-                HDL_Dump.EnableRaisingEvents = True
-
-                'Check if CD or DVD
-                If GetDiscType(GameISO) = DiscType.DVD Then
-                    LockUI() 'Disable UI controls
-
-                    HDL_Dump.StartInfo.Arguments = "inject_dvd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ " + GameID + " *u4 -hide"
-                    HDL_Dump.Start()
-                    HDL_Dump.BeginOutputReadLine()
-                Else
-                    LockUI()
-
-                    HDL_Dump.StartInfo.Arguments = "inject_cd " + MountedDrive.HDLDriveName + " """ + GameTitle + """ """ + GameISO + """ " + GameID + " *u4 -hide"
-                    HDL_Dump.Start()
-                    HDL_Dump.BeginOutputReadLine()
-                End If
-            End If
-        End If
-    End Sub
-
-    Private Sub CreateGamePartition()
-        Dim CreatedGamePartition As String = ""
-
-        'Get the created partition
-        '1. List partitions
-        Dim QueryOutput As String()
-        Using HDLDump As New Process()
-            HDLDump.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "toc " + MountedDrive.HDLDriveName
-            HDLDump.StartInfo.RedirectStandardOutput = True
-            HDLDump.StartInfo.UseShellExecute = False
-            HDLDump.StartInfo.CreateNoWindow = True
-            HDLDump.Start()
-
-            Dim OutputReader As StreamReader = HDLDump.StandardOutput
-            QueryOutput = OutputReader.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
-        End Using
-
-        '2. Search for the created hidden partition
-        For Each HDDPartition As String In QueryOutput
-            If Not String.IsNullOrEmpty(HDDPartition) Then
-                If HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries).Count >= 3 Then
-                    HDDPartition = HDDPartition.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(4)
-                    If HDDPartition.Trim().StartsWith("__." + HDLGameID) Then 'The created hidden partition
-                        CreatedGamePartition = HDDPartition.Trim()
-                        Exit For
-                    End If
-                End If
-            End If
-        Next
-
-        MsgBox(CreatedGamePartition.Replace("__.", "PP."))
-
-        '3. Set mkpart command for the PP partition
-        Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt", False)
-            CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
-            CommandFileWriter.WriteLine("mkpart " + CreatedGamePartition.Replace("__.", "PP.") + " 128M PFS")
-            CommandFileWriter.WriteLine("exit")
-        End Using
-
-        '4. Proceed to partition creation
-        Dim PFSShellOutput As String
-        Using PFSShellProcess As New Process()
-            PFSShellProcess.StartInfo.FileName = "cmd"
-            PFSShellProcess.StartInfo.Arguments = """/c type """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt"" | """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\pfsshell.exe"" 2>&1"
-
-            PFSShellProcess.StartInfo.RedirectStandardOutput = True
-            PFSShellProcess.StartInfo.UseShellExecute = False
-            PFSShellProcess.StartInfo.CreateNoWindow = True
-
-            PFSShellProcess.Start()
-
-            Dim ShellReader As StreamReader = PFSShellProcess.StandardOutput
-            Dim ProcessOutput As String = ShellReader.ReadToEnd()
-
-            ShellReader.Close()
-            PFSShellOutput = ProcessOutput
-        End Using
-
-        '5. Read partition creation output
-        If PFSShellOutput.Contains("Main partition of 128M created.") Then
-
-            If StatusLabel.Dispatcher.CheckAccess() = False Then
-                StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Partition created, modifying header...")
-            Else
-                StatusLabel.Text = "Partition created, modifying header..."
+                MountedDrive.HDLDriveName = HDLDriveName
             End If
 
-            '6. Modify the created partition
-            ModifyPartitionHeader(CreatedGamePartition.Replace("__.", "PP."))
-        Else
-            MsgBox("There was an error in creating the game's PP partition, please check if the name doesn't already exists of if you have enough space.", MsgBoxStyle.Exclamation, "Error installing game")
+            MountedDrive.DriveID = GetHDDID()
 
             If Dispatcher.CheckAccess() = False Then
                 Dispatcher.BeginInvoke(Sub()
-                                           LockUI()
-                                           StatusLabel.Text = ""
-                                           ProgressGrid.Visibility = Visibility.Hidden
-                                           PreparedProjectsComboBox.SelectedItem = Nothing
+                                           InstallProjectButton.IsEnabled = True
+                                           NBDConnectionLabel.Text = "Connected"
+                                           NBDConnectionLabel.Foreground = Brushes.Green
+                                           ConnectButton.Content = "Disconnect"
                                        End Sub)
             Else
-                LockUI()
-                StatusLabel.Text = ""
-                ProgressGrid.Visibility = Visibility.Hidden
-                PreparedProjectsComboBox.SelectedItem = Nothing
-            End If
-
-            Exit Sub
-        End If
-    End Sub
-
-    Private Sub CreateHomebrewPartition(PartitionName As String)
-        If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
-            Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
-            Dim ProjectDirectory As String = File.ReadAllLines(SelectedProject.ProjectFile)(2).Split("="c)(1)
-
-            '1. Set mkpart command for the PP partition
-            Using CommandFileWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt", False)
-                CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
-                CommandFileWriter.WriteLine("mkpart " + PartitionName + " 128M PFS")
-                CommandFileWriter.WriteLine("exit")
-            End Using
-
-            '2. Proceed to partition creation
-            Dim PFSShellOutput As String
-            Using PFSShellProcess As New Process()
-                PFSShellProcess.StartInfo.FileName = "cmd"
-                PFSShellProcess.StartInfo.Arguments = """/c type """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\cmdlist\mkpart.txt"" | """ + My.Computer.FileSystem.CurrentDirectory + "\Tools\pfsshell.exe"" 2>&1"
-
-                PFSShellProcess.StartInfo.RedirectStandardOutput = True
-                PFSShellProcess.StartInfo.UseShellExecute = False
-
-                PFSShellProcess.Start()
-
-                Dim ShellReader As StreamReader = PFSShellProcess.StandardOutput
-                Dim ProcessOutput As String = ShellReader.ReadToEnd()
-
-                ShellReader.Close()
-                PFSShellOutput = ProcessOutput
-            End Using
-
-            '3. Read partition creation output
-            If PFSShellOutput.Contains("Main partition of 128M created.") Then
-                StatusLabel.Text = "Partition created, modifying header..."
-
-                '4. Modify the created partition
-                ModifyPartitionHeader(PartitionName)
-            Else
-                MsgBox("There was an error in creating the homebrew's PP partition." + vbCrLf + "Please check if the partition name '" + PartitionName + "' does not already exists of if HDD space is sufficient.", MsgBoxStyle.Exclamation, "Error while installing homebrew")
-                Exit Sub
-            End If
-        End If
-    End Sub
-
-    Private Sub ModifyPartitionHeader(PartitionName As String)
-        '1. Create a copy of hdl_dump in the project directory
-        File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\hdl_dump.exe", CurrentProjectDirectory + "\hdl_dump.exe", True)
-
-        '2. Switch to project directory and inject the files
-        Directory.SetCurrentDirectory(CurrentProjectDirectory)
-
-        '3. Modify the partition header using hdl_dump
-        Dim HDLDumpOutput As String = ""
-        Using HDLDump As New Process()
-            HDLDump.StartInfo.FileName = "hdl_dump.exe"
-            HDLDump.StartInfo.Arguments = "modify_header " + MountedDrive.HDLDriveName + " " + PartitionName
-            HDLDump.StartInfo.RedirectStandardOutput = True
-            HDLDump.StartInfo.UseShellExecute = False
-            HDLDump.StartInfo.CreateNoWindow = True
-            HDLDump.Start()
-
-            HDLDumpOutput = HDLDump.StandardOutput.ReadToEnd()
-        End Using
-
-        '4. Read hdl_dump output
-        If Not HDLDumpOutput.Contains("partition not found:") Then
-
-            If StatusLabel.Dispatcher.CheckAccess() = False Then
-                StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Partition header modified, adding files...")
-            Else
-                StatusLabel.Text = "Partition header modified, adding files..."
-            End If
-
-            '5. Add files to the partition
-            AddFilesToPartition(PartitionName)
-        Else
-            MsgBox("There was an error while modifying the partition, please check if you have enough space and report the next error." + vbCrLf + HDLDumpOutput, MsgBoxStyle.Exclamation, "Error installing game")
-            'Set the current directory back
-            Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory)
-            Exit Sub
-        End If
-    End Sub
-
-    Private Sub AddFilesToPartition(PartitionName As String)
-        'Now put the "res" folder and EXECUTE.KELF file into the partition
-        Dim PFSShellOutput As String
-
-        'Set the mkdir & put commands
-        Using CommandFileWriter As New StreamWriter(AppDomain.CurrentDomain.BaseDirectory + "Tools\cmdlist\push.txt", False)
-            CommandFileWriter.WriteLine("device " + MountedDrive.DriveID)
-            CommandFileWriter.WriteLine("mount " + PartitionName)
-            CommandFileWriter.WriteLine("put EXECUTE.KELF")
-            CommandFileWriter.WriteLine("mkdir res")
-            CommandFileWriter.WriteLine("cd res")
-
-            If File.Exists("res\info.sys") Then
-                CommandFileWriter.WriteLine("put res\info.sys")
-                CommandFileWriter.WriteLine("rename res\info.sys info.sys")
-            End If
-            If File.Exists("res\jkt_001.png") Then
-                CommandFileWriter.WriteLine("put res\jkt_001.png")
-                CommandFileWriter.WriteLine("rename res\jkt_001.png jkt_001.png")
-            End If
-            If File.Exists("res\jkt_002.png") Then
-                CommandFileWriter.WriteLine("put res\jkt_002.png")
-                CommandFileWriter.WriteLine("rename res\jkt_002.png jkt_002.png")
-            End If
-            If File.Exists("res\jkt_cp.png") Then
-                CommandFileWriter.WriteLine("put res\jkt_cp.png")
-                CommandFileWriter.WriteLine("rename res\jkt_cp.png jkt_cp.png")
-            End If
-            If File.Exists("res\man.xml") Then
-                CommandFileWriter.WriteLine("put res\man.xml")
-                CommandFileWriter.WriteLine("rename res\man.xml man.xml")
-            End If
-            If File.Exists("res\notice.jpg") Then
-                CommandFileWriter.WriteLine("put res\notice.jpg")
-                CommandFileWriter.WriteLine("rename res\notice.jpg notice.jpg")
-            End If
-
-            If Directory.Exists("res\image") Then
-                CommandFileWriter.WriteLine("mkdir image")
-                CommandFileWriter.WriteLine("cd image")
-
-                If File.Exists("res\image\0.png") Then
-                    CommandFileWriter.WriteLine("put res\image\0.png")
-                    CommandFileWriter.WriteLine("rename res\image\0.png 0.png")
-                End If
-                If File.Exists("res\image\1.png") Then
-                    CommandFileWriter.WriteLine("put res\image\1.png")
-                    CommandFileWriter.WriteLine("rename res\image\1.png 1.png")
-                End If
-                If File.Exists("res\image\2.png") Then
-                    CommandFileWriter.WriteLine("put res\image\2.png")
-                    CommandFileWriter.WriteLine("rename res\image\2.png 2.png")
-                End If
-            End If
-
-            CommandFileWriter.WriteLine("umount")
-            CommandFileWriter.WriteLine("exit")
-        End Using
-
-        'Put all detected files to the partition
-        Using PFSShellProcess As New Process()
-            PFSShellProcess.StartInfo.FileName = "cmd"
-            PFSShellProcess.StartInfo.Arguments = """/c type """ + AppDomain.CurrentDomain.BaseDirectory + "Tools\cmdlist\push.txt"" | """ + AppDomain.CurrentDomain.BaseDirectory + "Tools\pfsshell.exe"" 2>&1"
-            PFSShellProcess.StartInfo.RedirectStandardOutput = True
-            PFSShellProcess.StartInfo.UseShellExecute = False
-            PFSShellProcess.StartInfo.CreateNoWindow = True
-
-            PFSShellProcess.Start()
-            PFSShellProcess.WaitForExit()
-
-            Dim PFSShellReader As StreamReader = PFSShellProcess.StandardOutput
-            Dim ProcessOutput As String = PFSShellReader.ReadToEnd()
-
-            PFSShellReader.Close()
-            PFSShellOutput = ProcessOutput
-        End Using
-
-        'Update UI
-        If Dispatcher.CheckAccess() = False Then
-            Dispatcher.BeginInvoke(Sub()
-                                       LockUI()
-                                       StatusLabel.Text = ""
-                                       ProgressGrid.Visibility = Visibility.Hidden
-                                       PreparedProjectsComboBox.SelectedItem = Nothing
-                                   End Sub)
-        Else
-            LockUI()
-            StatusLabel.Text = ""
-            ProgressGrid.Visibility = Visibility.Hidden
-            PreparedProjectsComboBox.SelectedItem = Nothing
-        End If
-
-        'Set the current directory back
-        Directory.SetCurrentDirectory(AppDomain.CurrentDomain.BaseDirectory)
-
-        MsgBox("Installation completed!", MsgBoxStyle.Information, "Success")
-    End Sub
-
-    Public Sub HDLDumpOutputDataHandler(sender As Object, e As DataReceivedEventArgs)
-        If Not String.IsNullOrEmpty(e.Data) Then
-
-            If StatusLabel.CheckAccess() = False Then
-                StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = e.Data)
-            Else
-                StatusLabel.Text = e.Data
-            End If
-
-            Dim ProgressPercentage As Double = 0
-
-            If Regex.Match(e.Data, "\d\d[%]+").Success Then
-                If Double.TryParse(Regex.Match(e.Data, "\d\d[%]+").Value.Replace("%", ""), ProgressPercentage) = True Then
-                    If StatusProgressBar.CheckAccess() = False Then
-                        StatusProgressBar.Dispatcher.BeginInvoke(Sub() StatusProgressBar.Value = ProgressPercentage)
-                    Else
-                        StatusProgressBar.Value = ProgressPercentage
-                    End If
-                End If
-            End If
-
-        End If
-    End Sub
-
-    Private Sub HDL_Dump_Exited(sender As Object, e As EventArgs) Handles HDL_Dump.Exited
-        HDL_Dump.CancelOutputRead()
-        HDL_Dump.Dispose()
-
-        'Proceed to game partition
-        If StatusLabel.CheckAccess() = False Then
-            StatusLabel.Dispatcher.BeginInvoke(Sub() StatusLabel.Text = "Creating game PP partition ...")
-        Else
-            StatusLabel.Text = "Creating game PP partition ..."
-        End If
-
-        CreateGamePartition()
-    End Sub
-
-    Private Sub ConnectDelay_Tick(sender As Object, e As EventArgs) Handles ConnectDelay.Tick
-        'Get drive properties after the connect delay
-        If IsNBDConnected() Then
-
-            If InstallProjectButton.CheckAccess() = False Then
-                InstallProjectButton.Dispatcher.BeginInvoke(Sub() InstallProjectButton.IsEnabled = True)
-            Else
                 InstallProjectButton.IsEnabled = True
-            End If
-
-            If NBDConnectionLabel.CheckAccess() = False Then
-                NBDConnectionLabel.Dispatcher.BeginInvoke(Sub()
-                                                              NBDConnectionLabel.Text = "Connected"
-                                                              NBDConnectionLabel.Foreground = Brushes.Green
-                                                          End Sub)
-            Else
                 NBDConnectionLabel.Text = "Connected"
                 NBDConnectionLabel.Foreground = Brushes.Green
-            End If
-
-            If ConnectButton.CheckAccess() = False Then
-                ConnectButton.Dispatcher.BeginInvoke(Sub() ConnectButton.Content = "Disconnect")
-            Else
                 ConnectButton.Content = "Disconnect"
             End If
 
             MsgBox("PSX HDD is now connected." + vbCrLf + "You can now install a project on the PSX.", MsgBoxStyle.Information, "Success")
+        ElseIf Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
+            Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+            MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
+            MountStatusLabel.Foreground = Brushes.Green
+            MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
+
+            MountedDrive.DriveID = GetHDDID()
+
+            InstallProjectButton.IsEnabled = True
+            NBDConnectionStatusLabel.Text = "Local Connection:"
+            NBDConnectionLabel.Text = "Connected"
+
+            EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
+            EnterIPLabel.TextAlignment = TextAlignment.Center
+            ConnectButton.IsEnabled = False
+            PSXIPTextBox.IsEnabled = False
+            PSXIPTextBox.Text = "Local Connection"
+            ConnectButton.Foreground = Brushes.Black
+
+            NBDConnectionLabel.Foreground = Brushes.Green
+            ConnectButton.Content = "Disabled"
         Else
             MsgBox("Could not connect to the PSX." + vbCrLf + "Please check the IP address.", MsgBoxStyle.Critical, "Error")
         End If

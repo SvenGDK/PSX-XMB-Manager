@@ -31,15 +31,15 @@ Public Class GameEditor
         'Save selected XMB cover as compressed PNG
         'Skips now already saved art
         If CoverPictureBox.Tag IsNot Nothing Then
-            Dim Cover1Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString, 140, 200)
-            Dim Cover2Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString, 74, 108)
+            Dim Cover1Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 140, 200)
+            Dim Cover2Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 74, 108)
 
-                If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
-                End If
-                If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
-                End If
+            If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                Utils.ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
+            End If
+            If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                Utils.ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
+            End If
 
             Try
                 Using CompressedImage = Quantizer.QuantizeImage(Cover1Bitmap)
@@ -52,6 +52,7 @@ Public Class GameEditor
                 MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
             Finally
                 Cover1Bitmap.Dispose()
+                Cover2Bitmap.Dispose()
             End Try
         End If
 
@@ -165,7 +166,7 @@ Public Class GameEditor
             MANWriter.WriteLine("")
         End Using
 
-        If MsgBox("Game ressources saved! Close this window ?", MsgBoxStyle.YesNo, "Saved") = MsgBoxResult.Yes Then
+        If MsgBox("Game resources saved! Close this window ?", MsgBoxStyle.YesNo, "Saved") = MsgBoxResult.Yes Then
             Close()
         End If
     End Sub
@@ -269,6 +270,7 @@ Public Class GameEditor
                 ScreenshotImage2PictureBox.Tag = PSXDatacenterBrowser.Document.GetElementById("table22").GetElementsByTagName("img")(2).GetAttribute("src")
             End If
 
+            'Save automatically if project is created using the Game Library
             If AutoSave = True Then
                 SaveButton_Click(SaveButton, New RoutedEventArgs())
             End If
@@ -284,6 +286,36 @@ Public Class GameEditor
         If OFD.ShowDialog() = Forms.DialogResult.OK Then
             CoverPictureBox.Source = New BitmapImage(New Uri(OFD.FileName))
             CoverPictureBox.Tag = OFD.FileName
+        End If
+    End Sub
+
+    Public Sub ApplyKnownValues(GameID As String, GameTitle As String)
+        'Set Title, ID & Region
+        GameTitleTextBox.Text = GameTitle
+        GameIDTextBox.Text = GameID
+        RegionTextBox.Text = PS2Game.GetGameRegionByGameID(GameID)
+
+        'Set Cover
+        If Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
+
+            'Set Tag
+            CoverPictureBox.Tag = "https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg"
+
+            'Load the Cover
+            Dispatcher.BeginInvoke(Sub()
+                                       Dim TempBitmapImage = New BitmapImage()
+                                       TempBitmapImage.BeginInit()
+                                       TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                       TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                       TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg", UriKind.RelativeOrAbsolute)
+                                       TempBitmapImage.EndInit()
+                                       CoverPictureBox.Source = TempBitmapImage
+                                   End Sub)
+        End If
+
+        'Save automatically if project is created using the Game Library
+        If AutoSave = True Then
+            SaveButton_Click(SaveButton, New RoutedEventArgs())
         End If
     End Sub
 

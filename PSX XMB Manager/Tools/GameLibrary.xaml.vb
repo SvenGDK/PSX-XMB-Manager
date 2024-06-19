@@ -134,12 +134,12 @@ Public Class GameLibrary
                                                TempBitmapImage.EndInit()
                                                NewPS2Game.GameCoverSource = TempBitmapImage
                                            End Sub)
-                    NewPS2Game.GameTitle = GetGameTitleFromDatabaseList(GameID)
+                    NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
                 Else
                     Dispatcher.BeginInvoke(Sub()
                                                NewPS2Game.GameCoverSource = New BitmapImage(New Uri("/Images/blankcover.png", UriKind.RelativeOrAbsolute))
                                            End Sub)
-                    NewPS2Game.GameTitle = GetGameTitleFromDatabaseList(GameID)
+                    NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
                 End If
 
                 'Add to the ListView
@@ -346,11 +346,11 @@ Public Class GameLibrary
         HDLDump2.BeginOutputReadLine()
     End Sub
 
-    Public Function GetGameTitleFromDatabaseList(GameID As String) As String
+    Public Function GetPS2GameTitleFromDatabaseList(GameID As String) As String
         Dim FoundGameTitle As String = ""
         GameID = GameID.Replace("-", "")
 
-        For Each GameTitle As String In File.ReadLines(My.Computer.FileSystem.CurrentDirectory + "\Tools\ids.txt")
+        For Each GameTitle As String In File.ReadLines(My.Computer.FileSystem.CurrentDirectory + "\Tools\ps2ids.txt")
             If GameTitle.Contains(GameID) Then
                 FoundGameTitle = GameTitle.Split(";"c)(1)
                 Exit For
@@ -687,7 +687,7 @@ Public Class GameLibrary
                     Dispatcher.BeginInvoke(Sub()
                                                NewPS2Game.GameCoverSource = New BitmapImage(New Uri("/Images/blankcover.png", UriKind.RelativeOrAbsolute))
                                            End Sub)
-                    NewPS2Game.GameTitle = GetGameTitleFromDatabaseList(GameID)
+                    NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
                 End If
 
                 'Add to the ListView
@@ -816,13 +816,14 @@ Public Class GameLibrary
             End If
 
             'Write Project settings to .CFG
-            Using ProjectWriter As New StreamWriter(".\Projects\" + SelectedPS2Game.GameTitle + ".CFG", False)
+            Using ProjectWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Projects\" + SelectedPS2Game.GameTitle + ".CFG", False)
                 ProjectWriter.WriteLine("TITLE=" + SelectedPS2Game.GameTitle)
                 ProjectWriter.WriteLine("ID=" + SelectedPS2Game.GameID.Replace("-", "_").Insert(8, "."))
                 ProjectWriter.WriteLine("DIR=" + NewGameProjectDirectory)
                 ProjectWriter.WriteLine("ELForISO=" + SelectedPS2Game.GameFilePath)
                 ProjectWriter.WriteLine("TYPE=GAME")
                 ProjectWriter.WriteLine("SIGNED=FALSE")
+                ProjectWriter.WriteLine("GAMETYPE=PS2")
             End Using
 
             'Write SYSTEM.CNF to project directory
@@ -921,13 +922,22 @@ Public Class GameLibrary
                 MANWriter.WriteLine("")
             End Using
 
+            'Open project settings window
             NewGameProjectWindow.Show()
 
+            'Open the Game Editor (in case of additional changes)
             NewGameEditor.Show()
             NewGameEditor.AutoSave = True
-            NewGameEditor.PSXDatacenterBrowser.Navigate("https://psxdatacenter.com/psx2/games2/" + SelectedPS2Game.GameID + ".html")
-        End If
 
+            'Open the Game Editor and try to load values from PSXDatacenter
+            If Utils.IsURLValid("https://psxdatacenter.com/psx2/games2/" + SelectedPS2Game.GameID + ".html") Then
+                NewGameEditor.PSXDatacenterBrowser.Navigate("https://psxdatacenter.com/psx2/games2/" + SelectedPS2Game.GameID + ".html")
+            Else
+                'Apply cover, title and region only if no data is available on PSXDatacenter
+                NewGameEditor.ApplyKnownValues(SelectedPS2Game.GameID, SelectedPS2Game.GameTitle)
+            End If
+
+        End If
     End Sub
 
     Private Sub ModifyPartitionMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles ModifyPartitionMenuItem.Click

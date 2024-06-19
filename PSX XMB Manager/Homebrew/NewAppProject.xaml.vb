@@ -72,6 +72,7 @@ Public Class NewAppProject
             ProjectWriter.WriteLine("ELForISO=" + ProjectELFFileTextBox.Text)
             ProjectWriter.WriteLine("TYPE=APP")
             ProjectWriter.WriteLine("SIGNED=FALSE")
+            ProjectWriter.WriteLine("GAMETYPE=PS2")
         End Using
 
         'Write SYSTEM.CNF to project directory

@@ -1,0 +1,42 @@
+﻿<?xml version="1.0"?>
+<SyntaxDefinition name="DIC" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+	<Color name="Key" foreground="Blue" />
+	<Color name="Value" foreground="Orange" />
+	
+	<!-- This is the main ruleset. -->
+	<RuleSet>
+		<Span color="Key">
+			<Begin>{</Begin>
+			<End>}</End>
+			<RuleSet>
+				<!-- nested span for escape sequences -->
+				<Span begin="\\" end="." />
+			</RuleSet>
+		</Span>
+
+		<Span color="Value">
+			<Begin>"</Begin>
+			<End>"</End>
+			<RuleSet>
+				<!-- nested span for escape sequences -->
+				<Span begin="\\" end="." />
+			</RuleSet>
+		</Span>
+		
+		<Keywords fontWeight="bold" foreground="Green">
+			<Word> \n</Word>
+			<Word>・</Word>
+
+		</Keywords>
+		
+		<!-- Digits -->
+		<Rule foreground="DarkBlue">
+            \b0[xX][0-9a-fA-F]+  # hex number
+        |    \b
+            (    \d+(\.[0-9]+)?   #number with optional floating point
+            |    \.[0-9]+         #or just starting with floating point
+            )
+            ([eE][+-]?[0-9]+)? # optional exponent
+        </Rule>
+	</RuleSet>
+</SyntaxDefinition>

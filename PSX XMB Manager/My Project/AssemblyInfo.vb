@@ -12,7 +12,7 @@ Imports System.Windows
 ' Werte der Assemblyattribute überprüfen
 
 <Assembly: AssemblyTitle("PSX XMB Manager")>
-<Assembly: AssemblyDescription("Install and manage homebrew & games on the PSX DESR.")>
+<Assembly: AssemblyDescription("Install & Manage Homebrew and Games on the PSX DVR (DESR).")>
 <Assembly: AssemblyCompany("SvenGDK")>
 <Assembly: AssemblyProduct("PSX XMB Manager")>
 <Assembly: AssemblyCopyright("Copyright © SvenGDK 2022-2024")>
@@ -55,5 +55,5 @@ Imports System.Windows
 ' indem Sie "*" wie unten gezeigt eingeben:
 ' <Assembly: AssemblyVersion("1.0.*")>
 
-<Assembly: AssemblyVersion("2.3.0.0")>
-<Assembly: AssemblyFileVersion("2.3.0.0")>
+<Assembly: AssemblyVersion("3.0.0.0")>
+<Assembly: AssemblyFileVersion("3.0.0.0")>
