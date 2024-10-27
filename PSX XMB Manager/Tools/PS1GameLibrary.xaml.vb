@@ -308,17 +308,20 @@ Public Class PS1GameLibrary
     End Sub
 
     Private Sub GameLoaderWorker_RunWorkerCompleted(sender As Object, e As RunWorkerCompletedEventArgs) Handles GameLoaderWorker.RunWorkerCompleted
-        NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available game infos and missing covers."
-        NewLoadingWindow.LoadProgressBar.Value = 0
-        NewLoadingWindow.LoadProgressBar.Maximum = URLs.Count
+        If URLs.Count > 0 Then
+            NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available game infos and missing covers."
+            NewLoadingWindow.LoadProgressBar.Value = 0
+            NewLoadingWindow.LoadProgressBar.Maximum = URLs.Count
 
-        GetGameInfos()
+            GetGameInfos()
+        Else
+            NewLoadingWindow.Close()
+            GamesListView.Items.Refresh()
+        End If
     End Sub
 
     Private Sub GetGameInfos()
-        If URLs.Count > 0 Then
-            PSXDatacenterBrowser.Navigate(URLs.Item(0))
-        End If
+        PSXDatacenterBrowser.Navigate(URLs.Item(0))
     End Sub
 
     Private Sub PSXDatacenterBrowser_DocumentCompleted(sender As Object, e As WebBrowserDocumentCompletedEventArgs) Handles PSXDatacenterBrowser.DocumentCompleted
@@ -489,8 +492,13 @@ Public Class PS1GameLibrary
 
         For Each GameTitle As String In File.ReadLines(My.Computer.FileSystem.CurrentDirectory + "\Tools\ps1ids.txt")
             If GameTitle.Contains(GameID) Then
-                FoundGameTitle = GameTitle.Split(";"c)(1)
-                Exit For
+                If GameTitle.Split(";"c).Length > 1 Then
+                    FoundGameTitle = GameTitle.Split(";"c)(1)
+                    Exit For
+                Else
+                    FoundGameTitle = "Unknown PS2 game"
+                    Exit For
+                End If
             End If
         Next
 

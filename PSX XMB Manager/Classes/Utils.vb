@@ -2,6 +2,7 @@
 Imports System.Drawing
 Imports System.IO
 Imports System.Net
+Imports System.Net.NetworkInformation
 Imports System.Text.RegularExpressions
 
 Public Class Utils
@@ -193,6 +194,9 @@ Public Class Utils
                     ElseIf Line.Contains("Microsoft Virtual Disk") Then 'For testing with local VHD
                         DriveID = Line.Split(New String() {" "}, StringSplitOptions.RemoveEmptyEntries)(3).Trim()
                         Exit For
+                    ElseIf Line.Contains("is not recognized") Then 'Windows 11 removed wmic, prompt for installation before continuing
+                        DriveID = "WMIC_INSTALL_REQUIRED"
+                        Exit For
                     End If
                 End If
             Next
@@ -229,48 +233,65 @@ Public Class Utils
     End Function
 
     Public Shared Function GetResizedBitmap(ImageLocation As String, NewWidth As Integer, NewHeight As Integer) As Bitmap
-        Dim Request As WebRequest = WebRequest.Create(ImageLocation)
-        Dim Response As WebResponse = Request.GetResponse()
-        Dim ResponseStream As Stream = Response.GetResponseStream()
+        Try
+            If NetworkInterface.GetIsNetworkAvailable Then
+                Dim Request As WebRequest = WebRequest.Create(ImageLocation)
+                Dim Response As WebResponse = Request.GetResponse()
+                Dim ResponseStream As Stream = Response.GetResponseStream()
 
-        Dim OriginalBitmap As New Bitmap(ResponseStream)
-        Dim ResizedBitmap As New Bitmap(OriginalBitmap, New Size(NewWidth, NewHeight))
+                Dim OriginalBitmap As New Bitmap(ResponseStream)
+                Dim ResizedBitmap As New Bitmap(OriginalBitmap, New Size(NewWidth, NewHeight))
 
-        Return ResizedBitmap
+                Return ResizedBitmap
+            Else
+                Return Nothing
+            End If
+        Catch Ex As Exception
+            Return Nothing
+        End Try
     End Function
 
     Public Shared Sub ConvertTo32bppAndDisposeOriginal(ByRef img As Bitmap)
-        Dim bmp = New Bitmap(img.Width, img.Height, Imaging.PixelFormat.Format32bppArgb)
+        Try
+            Dim bmp = New Bitmap(img.Width, img.Height, Imaging.PixelFormat.Format32bppArgb)
 
-        Using gr = Graphics.FromImage(bmp)
-            gr.DrawImage(img, New Rectangle(0, 0, 76, 108))
-        End Using
+            Using gr = Graphics.FromImage(bmp)
+                gr.DrawImage(img, New Rectangle(0, 0, 76, 108))
+            End Using
 
-        img.Dispose()
-        img = bmp
+            img.Dispose()
+            img = bmp
+        Catch ex As Exception
+            img = Nothing
+        End Try
     End Sub
 
     Public Shared Function IsURLValid(Url As String) As Boolean
         Try
-            Dim request As HttpWebRequest = CType(WebRequest.Create(Url), HttpWebRequest)
-            Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
-                If response.StatusCode = HttpStatusCode.OK Then
-                    Return True
-                ElseIf response.StatusCode = HttpStatusCode.Found Then
-                    Return True
-                ElseIf response.StatusCode = HttpStatusCode.NotFound Then
-                    Return False
-                ElseIf response.StatusCode = HttpStatusCode.Unauthorized Then
-                    Return False
-                ElseIf response.StatusCode = HttpStatusCode.Forbidden Then
-                    Return False
-                ElseIf response.StatusCode = HttpStatusCode.BadGateway Then
-                    Return False
-                ElseIf response.StatusCode = HttpStatusCode.BadRequest Then
-                    Return False
-                End If
+            If NetworkInterface.GetIsNetworkAvailable Then
+                Dim request As HttpWebRequest = CType(WebRequest.Create(Url), HttpWebRequest)
+                Using response As HttpWebResponse = CType(request.GetResponse(), HttpWebResponse)
+                    If response.StatusCode = HttpStatusCode.OK Then
+                        Return True
+                    ElseIf response.StatusCode = HttpStatusCode.Found Then
+                        Return True
+                    ElseIf response.StatusCode = HttpStatusCode.NotFound Then
+                        Return False
+                    ElseIf response.StatusCode = HttpStatusCode.Unauthorized Then
+                        Return False
+                    ElseIf response.StatusCode = HttpStatusCode.Forbidden Then
+                        Return False
+                    ElseIf response.StatusCode = HttpStatusCode.BadGateway Then
+                        Return False
+                    ElseIf response.StatusCode = HttpStatusCode.BadRequest Then
+                        Return False
+                    Else
+                        Return False
+                    End If
+                End Using
+            Else
                 Return False
-            End Using
+            End If
         Catch Ex As Exception
             Return False
         End Try

@@ -14,7 +14,7 @@ Public Class NewMainWindow
     Private WithEvents ConnectDelay As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(2)}
     Private WithEvents ContentDownloader As New WebClient()
 
-    Private Sub NewMainWindow_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
+    Private Sub NewMainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         Title = String.Format("PSX XMB Manager - {0}.{1}.{2}", My.Application.Info.Version.Major, My.Application.Info.Version.Minor, My.Application.Info.Version.Build)
 
         If Not Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
@@ -23,8 +23,30 @@ Public Class NewMainWindow
         Else
             'Load saved projects
             For Each SavedProject In Directory.GetFiles(My.Computer.FileSystem.CurrentDirectory + "\Projects", "*.CFG")
-                Dim NewCBProjectItem As New ComboBoxProjectItem() With {.ProjectFile = Path.GetFullPath(SavedProject), .ProjectName = Path.GetFileNameWithoutExtension(SavedProject)}
-                Dim ProjectState As String = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
+
+                Dim NewCBProjectItem As New ComboBoxProjectItem()
+                If Not String.IsNullOrEmpty(Path.GetFullPath(SavedProject)) Then
+                    NewCBProjectItem.ProjectFile = Path.GetFullPath(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+                If Not String.IsNullOrEmpty(Path.GetFileNameWithoutExtension(SavedProject)) Then
+                    NewCBProjectItem.ProjectName = Path.GetFileNameWithoutExtension(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+
+                'Get project state of saved projects
+                Dim ProjectState As String = ""
+                If File.ReadAllLines(SavedProject).Length > 5 Then
+                    If File.ReadAllLines(SavedProject)(5).Split("="c).Length > 1 Then
+                        ProjectState = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
+                    Else
+                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    End If
+                Else
+                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
 
                 If ProjectState = "FALSE" Then
                     ProjectListComboBox.Items.Add(NewCBProjectItem)
@@ -41,11 +63,15 @@ Public Class NewMainWindow
 
         'Set wnbd-client
         If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
+            'Use installed wnbd client
             WNBDClientPath = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
         ElseIf File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe") Then
+            'Use included wnbd client
             WNBDClientPath = My.Computer.FileSystem.CurrentDirectory + "\Tools\wnbd-client.exe"
         End If
+    End Sub
 
+    Private Sub NewMainWindow_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
         'Check if NBD driver is installed
         If Not String.IsNullOrEmpty(WNBDClientPath) Then
             Using WNBDClient As New Process()
@@ -61,18 +87,19 @@ Public Class NewMainWindow
                 Dim SplittedOutput As String() = ProcessOutput.Split({vbCrLf}, StringSplitOptions.None)
 
                 Dim NBDDriverVersion As String
-
-                If Not SplittedOutput(2).Trim() = "" Then
-                    NBDDriverVersion = SplittedOutput(2).Trim().Split(":"c)(1).Trim()
-                    NBDDriverVersionLabel.Text = NBDDriverVersion
-                    NBDDriverVersionLabel.Foreground = Brushes.Green
-                Else
-                    NBDDriverVersionLabel.Text = "Not installed"
-                    NBDDriverVersionLabel.Foreground = Brushes.Red
+                If SplittedOutput.Length > 2 Then
+                    If Not SplittedOutput(2).Trim() = "" Then
+                        NBDDriverVersion = SplittedOutput(2).Trim().Split(":"c)(1).Trim()
+                        NBDDriverVersionLabel.Text = NBDDriverVersion
+                        NBDDriverVersionLabel.Foreground = Brushes.Green
+                    Else
+                        NBDDriverVersionLabel.Text = "Not installed"
+                        NBDDriverVersionLabel.Foreground = Brushes.Red
+                    End If
                 End If
             End Using
 
-            'Check if NBD is connected or if the HDD is connected locally
+            'Check if NBD is connected to the PSX or if a HDD is connected locally
             Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
             If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then 'NBD
                 MountedDrive.NBDDriveName = ConnectedNBDDriveName
@@ -104,33 +131,49 @@ Public Class NewMainWindow
                 End If
 
                 MountedDrive.DriveID = GetHDDID()
+                If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                    If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                        Process.Start("ms-settings:optionalfeatures")
+                    End If
+                End If
 
                 InstallProjectButton.IsEnabled = True
                 NBDConnectionLabel.Text = "Connected"
                 NBDConnectionLabel.Foreground = Brushes.Green
                 ConnectButton.Content = "Disconnect"
 
-            ElseIf Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
-                Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
-                MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
-                MountStatusLabel.Foreground = Brushes.Green
-                MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
+            Else
+                If Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
+                    Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+                    MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
+                    MountStatusLabel.Foreground = Brushes.Green
+                    MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
 
-                MountedDrive.DriveID = GetHDDID()
+                    MountedDrive.DriveID = GetHDDID()
+                    If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                        If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                                  "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                                  "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                            Process.Start("ms-settings:optionalfeatures")
+                        End If
+                    End If
 
-                InstallProjectButton.IsEnabled = True
-                NBDConnectionStatusLabel.Text = "Local Connection:"
-                NBDConnectionLabel.Text = "Connected"
+                    InstallProjectButton.IsEnabled = True
+                    NBDConnectionStatusLabel.Text = "Local Connection:"
+                    NBDConnectionLabel.Text = "Connected"
 
-                EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
-                EnterIPLabel.TextAlignment = TextAlignment.Center
-                ConnectButton.IsEnabled = False
-                PSXIPTextBox.IsEnabled = False
-                PSXIPTextBox.Text = "Local Connection"
-                ConnectButton.Foreground = Brushes.Black
+                    EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
+                    EnterIPLabel.TextAlignment = TextAlignment.Center
+                    ConnectButton.IsEnabled = False
+                    PSXIPTextBox.IsEnabled = False
+                    PSXIPTextBox.Text = "Local Connection"
+                    ConnectButton.Foreground = Brushes.Black
 
-                NBDConnectionLabel.Foreground = Brushes.Green
-                ConnectButton.Content = "Disabled"
+                    NBDConnectionLabel.Foreground = Brushes.Green
+                    ConnectButton.Content = "Disabled"
+                End If
             End If
         End If
 
@@ -227,8 +270,30 @@ Public Class NewMainWindow
         If Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
             'Load saved projects
             For Each SavedProject In Directory.GetFiles(My.Computer.FileSystem.CurrentDirectory + "\Projects", "*.CFG")
-                Dim NewCBProjectItem As New ComboBoxProjectItem() With {.ProjectFile = SavedProject, .ProjectName = Path.GetFileNameWithoutExtension(SavedProject)}
-                Dim ProjectState As String = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
+
+                Dim NewCBProjectItem As New ComboBoxProjectItem()
+                If Not String.IsNullOrEmpty(Path.GetFullPath(SavedProject)) Then
+                    NewCBProjectItem.ProjectFile = Path.GetFullPath(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+                If Not String.IsNullOrEmpty(Path.GetFileNameWithoutExtension(SavedProject)) Then
+                    NewCBProjectItem.ProjectName = Path.GetFileNameWithoutExtension(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+
+                'Get project state of saved projects
+                Dim ProjectState As String = ""
+                If File.ReadAllLines(SavedProject).Length > 5 Then
+                    If File.ReadAllLines(SavedProject)(5).Split("="c).Length > 1 Then
+                        ProjectState = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
+                    Else
+                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    End If
+                Else
+                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
 
                 If ProjectState = "FALSE" Then
                     ProjectListComboBox.Items.Add(NewCBProjectItem)
@@ -238,7 +303,8 @@ Public Class NewMainWindow
                 End If
             Next
         Else
-            MsgBox("Could not find the Projects directory at " + My.Computer.FileSystem.CurrentDirectory + "\Projects", MsgBoxStyle.Critical, "Error")
+            'Set up a projects directory to save all created projects
+            Directory.CreateDirectory(My.Computer.FileSystem.CurrentDirectory + "\Projects")
         End If
     End Sub
 
@@ -342,84 +408,89 @@ Public Class NewMainWindow
             'Get project infos
             Dim SelectedProject As ComboBoxProjectItem = CType(ProjectListComboBox.SelectedItem, ComboBoxProjectItem)
             Dim ProjectInfos As String() = File.ReadAllLines(SelectedProject.ProjectFile)
-            Dim ProjectName As String = ProjectInfos(0).Split("="c)(1)
-            Dim ProjectSubtitle As String = ProjectInfos(1).Split("="c)(1)
-            Dim ProjectDirectory As String = ProjectInfos(2).Split("="c)(1)
-            Dim ProjectFile As String = ProjectInfos(3).Split("="c)(1)
-            Dim ProjectType As String = ProjectInfos(4).Split("="c)(1)
 
-            If ProjectType = "APP" Then
-                Dim HomebrewInfos As String() = File.ReadAllLines(ProjectDirectory + "\icon.sys")
-                Dim HomebrewProjectEditor As New NewAppProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
+            If ProjectInfos.Length > 4 Then
+                Dim ProjectName As String = ProjectInfos(0).Split("="c)(1)
+                Dim ProjectSubtitle As String = ProjectInfos(1).Split("="c)(1)
+                Dim ProjectDirectory As String = ProjectInfos(2).Split("="c)(1)
+                Dim ProjectFile As String = ProjectInfos(3).Split("="c)(1)
+                Dim ProjectType As String = ProjectInfos(4).Split("="c)(1)
 
-                HomebrewProjectEditor.ProjectNameTextBox.Text = ProjectName
-                HomebrewProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
-                HomebrewProjectEditor.ProjectTitleTextBox.Text = HomebrewInfos(1).Split("="c)(1)
-                HomebrewProjectEditor.ProjectSubTitleTextBox.Text = ProjectSubtitle
-                HomebrewProjectEditor.ProjectSubTitleTextBox.Text = HomebrewInfos(2).Split("="c)(1)
-                HomebrewProjectEditor.ProjectUninstallMsgTextBox.Text = HomebrewInfos(15).Split("="c)(1)
-                HomebrewProjectEditor.ProjectELFFileTextBox.Text = ProjectFile
+                If ProjectType = "APP" Then
+                    Dim HomebrewInfos As String() = File.ReadAllLines(ProjectDirectory + "\icon.sys")
+                    Dim HomebrewProjectEditor As New NewAppProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
 
-                If File.Exists(ProjectDirectory + "\list.ico") Then
-                    HomebrewProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                    HomebrewProjectEditor.ProjectNameTextBox.Text = ProjectName
+                    HomebrewProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
+                    HomebrewProjectEditor.ProjectTitleTextBox.Text = HomebrewInfos(1).Split("="c)(1)
+                    HomebrewProjectEditor.ProjectSubTitleTextBox.Text = ProjectSubtitle
+                    HomebrewProjectEditor.ProjectSubTitleTextBox.Text = HomebrewInfos(2).Split("="c)(1)
+                    HomebrewProjectEditor.ProjectUninstallMsgTextBox.Text = HomebrewInfos(15).Split("="c)(1)
+                    HomebrewProjectEditor.ProjectELFFileTextBox.Text = ProjectFile
+
+                    If File.Exists(ProjectDirectory + "\list.ico") Then
+                        HomebrewProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                    End If
+
+                    HomebrewProjectEditor.Show()
+                ElseIf ProjectType = "GAME" Then
+                    Dim GameType As String = ProjectInfos(6).Split("="c)(1)
+                    Dim GameInfos As String() = File.ReadAllLines(ProjectDirectory + "\icon.sys")
+
+                    Select Case GameType
+                        Case "PS1"
+                            Dim GameProjectEditor As New NewPS1GameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
+                            GameProjectEditor.ProjectNameTextBox.Text = ProjectName
+                            GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
+                            GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
+                            GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
+                            GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
+                            GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
+
+                            GameProjectEditor.IMAGE0PathTextBox.Text = ProjectFile
+                            GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectFile) + vbCrLf)
+
+                            'Check for multiple images and tick MultiDiscCheckBox if we have at least 2 discs
+                            For Each ProjectFileLine As String In ProjectInfos
+                                If ProjectFileLine.StartsWith("IMAGE1=") Then
+                                    GameProjectEditor.IMAGE1PathTextBox.Text = ProjectInfos(7).Split("="c)(1)
+                                    GameProjectEditor.MultiDiscCheckBox.IsChecked = True
+                                    GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(7).Split("="c)(1)) + vbCrLf)
+                                End If
+                                If ProjectFileLine.StartsWith("IMAGE2=") Then
+                                    GameProjectEditor.IMAGE2PathTextBox.Text = ProjectInfos(8).Split("="c)(1)
+                                    GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(8).Split("="c)(1)) + vbCrLf)
+                                End If
+                                If ProjectFileLine.StartsWith("IMAGE3=") Then
+                                    GameProjectEditor.IMAGE3PathTextBox.Text = ProjectInfos(9).Split("="c)(1)
+                                    GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(9).Split("="c)(1)))
+                                End If
+                            Next
+
+                            If File.Exists(ProjectDirectory + "\list.ico") Then
+                                GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                            End If
+
+                            GameProjectEditor.Show()
+                        Case "PS2"
+                            Dim GameProjectEditor As New NewGameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
+                            GameProjectEditor.ProjectNameTextBox.Text = ProjectName
+                            GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
+                            GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
+                            GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
+                            GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
+                            GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
+                            GameProjectEditor.ProjectISOFileTextBox.Text = ProjectFile
+
+                            If File.Exists(ProjectDirectory + "\list.ico") Then
+                                GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
+                            End If
+
+                            GameProjectEditor.Show()
+                    End Select
                 End If
-
-                HomebrewProjectEditor.Show()
-            ElseIf ProjectType = "GAME" Then
-                Dim GameType As String = ProjectInfos(6).Split("="c)(1)
-                Dim GameInfos As String() = File.ReadAllLines(ProjectDirectory + "\icon.sys")
-
-                Select Case GameType
-                    Case "PS1"
-                        Dim GameProjectEditor As New NewPS1GameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
-                        GameProjectEditor.ProjectNameTextBox.Text = ProjectName
-                        GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
-                        GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
-                        GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
-                        GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
-                        GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
-
-                        GameProjectEditor.IMAGE0PathTextBox.Text = ProjectFile
-                        GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectFile) + vbCrLf)
-
-                        'Check for multiple images and tick MultiDiscCheckBox if we have at least 2 discs
-                        For Each ProjectFileLine As String In ProjectInfos
-                            If ProjectFileLine.StartsWith("IMAGE1=") Then
-                                GameProjectEditor.IMAGE1PathTextBox.Text = ProjectInfos(7).Split("="c)(1)
-                                GameProjectEditor.MultiDiscCheckBox.IsChecked = True
-                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(7).Split("="c)(1)) + vbCrLf)
-                            End If
-                            If ProjectFileLine.StartsWith("IMAGE2=") Then
-                                GameProjectEditor.IMAGE2PathTextBox.Text = ProjectInfos(8).Split("="c)(1)
-                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(8).Split("="c)(1)) + vbCrLf)
-                            End If
-                            If ProjectFileLine.StartsWith("IMAGE3=") Then
-                                GameProjectEditor.IMAGE3PathTextBox.Text = ProjectInfos(9).Split("="c)(1)
-                                GameProjectEditor.DISCSInfoTextBox.AppendText(Path.GetFileName(ProjectInfos(9).Split("="c)(1)))
-                            End If
-                        Next
-
-                        If File.Exists(ProjectDirectory + "\list.ico") Then
-                            GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
-                        End If
-
-                        GameProjectEditor.Show()
-                    Case "PS2"
-                        Dim GameProjectEditor As New NewGameProject() With {.Title = "Editing project " + ProjectName + " - " + ProjectDirectory}
-                        GameProjectEditor.ProjectNameTextBox.Text = ProjectName
-                        GameProjectEditor.ProjectDirectoryTextBox.Text = ProjectDirectory
-                        GameProjectEditor.ProjectTitleTextBox.Text = GameInfos(1).Split("="c)(1)
-                        GameProjectEditor.ProjectIDTextBox.Text = ProjectSubtitle
-                        GameProjectEditor.ProjectIDTextBox.Text = GameInfos(2).Split("="c)(1)
-                        GameProjectEditor.ProjectUninstallMsgTextBox.Text = GameInfos(15).Split("="c)(1)
-                        GameProjectEditor.ProjectISOFileTextBox.Text = ProjectFile
-
-                        If File.Exists(ProjectDirectory + "\list.ico") Then
-                            GameProjectEditor.ProjectIconPathTextBox.Text = ProjectDirectory + "\list.ico"
-                        End If
-
-                        GameProjectEditor.Show()
-                End Select
+            Else
+                MsgBox("A broken project has been detected: " + SelectedProject.ProjectFile + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
             End If
         End If
     End Sub
@@ -438,132 +509,138 @@ Public Class NewMainWindow
     Private Sub PrepareProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles PrepareProjectButton.Click
         If ProjectListComboBox.SelectedItem IsNot Nothing Then
             Dim SelectedProject As ComboBoxProjectItem = CType(ProjectListComboBox.SelectedItem, ComboBoxProjectItem)
-            Dim ProjectDIR As String = File.ReadAllLines(SelectedProject.ProjectFile)(2).Split("="c)(1)
-            Dim SignedStatus As String = File.ReadAllLines(SelectedProject.ProjectFile)(5).Split("="c)(1)
-            Dim SignedELF As Boolean = False
+            If File.ReadAllLines(SelectedProject.ProjectFile).Length > 5 Then
+                Dim ProjectDIR As String = File.ReadAllLines(SelectedProject.ProjectFile)(2).Split("="c)(1)
+                Dim SignedStatus As String = File.ReadAllLines(SelectedProject.ProjectFile)(5).Split("="c)(1)
+                Dim SignedELF As Boolean = False
 
-            'Check if KELF already exists
-            If File.Exists(ProjectDIR + "\EXECUTE.KELF") Or File.Exists(ProjectDIR + "\boot.elf") Or File.Exists(ProjectDIR + "\boot.kelf") Then SignedELF = True
+                'Check if KELF already exists
+                If File.Exists(ProjectDIR + "\EXECUTE.KELF") Or File.Exists(ProjectDIR + "\boot.elf") Or File.Exists(ProjectDIR + "\boot.kelf") Then SignedELF = True
 
-            If SignedStatus = "TRUE" AndAlso SignedELF = True Then
-                MsgBox("Your Project doesn't need to be prepared again.", MsgBoxStyle.Information)
-            Else
-                Dim ProjectELForISO As String = File.ReadAllLines(SelectedProject.ProjectFile)(3).Split("="c)(1)
-                Dim ProjectTYPE As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
-
-                If ProjectTYPE = "APP" Then
-                    'Wrap the application ELF as EXECUTE.KELF
-                    Dim WrapProcess As New Process()
-                    WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
-                    WrapProcess.StartInfo.Arguments = """" + ProjectELForISO + """ " + ProjectDIR + "\EXECUTE.KELF"
-                    WrapProcess.StartInfo.CreateNoWindow = True
-                    WrapProcess.Start()
-                    WrapProcess.WaitForExit()
-
-                    'Mark project as SIGNED
-                    Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
-                    ProjectConfigFileLines(5) = "SIGNED=TRUE"
-                    File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
-
-                    MsgBox("Homebrew Project prepared with success !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                If SignedStatus = "TRUE" AndAlso SignedELF = True Then
+                    MsgBox("Your Project doesn't need to be prepared again.", MsgBoxStyle.Information)
                 Else
+                    Dim ProjectELForISO As String = File.ReadAllLines(SelectedProject.ProjectFile)(3).Split("="c)(1)
+                    Dim ProjectTYPE As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
 
-                    'PS1 games get POPSTARTER and PS2 games get OPL-Launcher
-                    Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
+                    If ProjectTYPE = "APP" Then
+                        'Wrap the application ELF as EXECUTE.KELF
+                        Dim WrapProcess As New Process()
+                        WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
+                        WrapProcess.StartInfo.Arguments = """" + ProjectELForISO + """ " + ProjectDIR + "\EXECUTE.KELF"
+                        WrapProcess.StartInfo.CreateNoWindow = True
+                        WrapProcess.Start()
+                        WrapProcess.WaitForExit()
 
-                    Select Case GameType
-                        Case "PS1"
-                            'Copy included POPSTARTER to project folder
-                            If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF") Then
-                                File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF", ProjectDIR + "\EXECUTE.KELF", True) 'Save as EXECUTE.KELF
-                            Else
-                                MsgBox("POPSTARTER.KELF is missing in the Tools directory.", MsgBoxStyle.Critical, "Error setting up the project")
-                            End If
-                        Case "PS2"
-                            'Copy included OPL-Launcher to project folder
-                            If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF") Then
-                                File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF", ProjectDIR + "\EXECUTE.KELF", True)
-                            Else
-                                'OPL-Launcher not found...
-                                Dim HomebrewELF As String = ""
+                        'Mark project as SIGNED
+                        Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
+                        ProjectConfigFileLines(5) = "SIGNED=TRUE"
+                        File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
 
-                                HomebrewELF = InputBox("OPL-Launcher has been deleted from the Tools folder." + vbCrLf + "Please enter the full path to the .elf file or leave the URL to download OPL-Launcher.",
-                                                           "Missing file",
-                                                           "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf")
+                        MsgBox("Homebrew Project prepared with success !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                    Else
 
-                                If Not String.IsNullOrEmpty(HomebrewELF) Then
-                                    If HomebrewELF = "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf" Then
-                                        'Download latest OPL-Launcher
-                                        ContentDownloader.DownloadFile("https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf", My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf")
-                                    End If
+                        'PS1 games get POPSTARTER and PS2 games get OPL-Launcher
+                        Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
+
+                        Select Case GameType
+                            Case "PS1"
+                                'Copy included POPSTARTER to project folder
+                                If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF") Then
+                                    File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\POPSTARTER.KELF", ProjectDIR + "\EXECUTE.KELF", True) 'Save as EXECUTE.KELF
                                 Else
-                                    MsgBox("Not valid file provided, aborting ...", MsgBoxStyle.Exclamation, "Aborting")
-                                    Exit Sub
+                                    MsgBox("POPSTARTER.KELF is missing in the Tools directory.", MsgBoxStyle.Critical, "Error setting up the project")
                                 End If
+                            Case "PS2"
+                                'Copy included OPL-Launcher to project folder
+                                If File.Exists(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF") Then
+                                    File.Copy(My.Computer.FileSystem.CurrentDirectory + "\Tools\EXECUTE.KELF", ProjectDIR + "\EXECUTE.KELF", True)
+                                Else
+                                    'OPL-Launcher not found...
+                                    Dim HomebrewELF As String = ""
 
-                                'Wrap OPL-Launcher as EXECUTE.KELF
-                                Dim WrapProcess As New Process()
-                                WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
-                                WrapProcess.StartInfo.Arguments = """" + My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf"" """ + ProjectDIR + "\EXECUTE.KELF"""
-                                WrapProcess.StartInfo.CreateNoWindow = True
-                                WrapProcess.Start()
-                                WrapProcess.WaitForExit()
-                            End If
-                    End Select
+                                    HomebrewELF = InputBox("OPL-Launcher has been deleted from the Tools folder." + vbCrLf + "Please enter the full path to the .elf file or leave the URL to download OPL-Launcher.",
+                                                               "Missing file",
+                                                               "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf")
 
-                    'Mark project as SIGNED
-                    Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
-                    ProjectConfigFileLines(5) = "SIGNED=TRUE"
-                    File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
+                                    If Not String.IsNullOrEmpty(HomebrewELF) Then
+                                        If HomebrewELF = "https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf" Then
+                                            'Download latest OPL-Launcher
+                                            ContentDownloader.DownloadFile("https://github.com/ps2homebrew/OPL-Launcher/releases/download/latest/OPL-Launcher.elf", My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf")
+                                        End If
+                                    Else
+                                        MsgBox("Not valid file provided, aborting ...", MsgBoxStyle.Exclamation, "Aborting")
+                                        Exit Sub
+                                    End If
 
-                    MsgBox("Game Project is now prepared !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                                    'Wrap OPL-Launcher as EXECUTE.KELF
+                                    Dim WrapProcess As New Process()
+                                    WrapProcess.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\SCEDoormat_NoME.exe"
+                                    WrapProcess.StartInfo.Arguments = """" + My.Computer.FileSystem.CurrentDirectory + "\Tools\OPL-Launcher.elf"" """ + ProjectDIR + "\EXECUTE.KELF"""
+                                    WrapProcess.StartInfo.CreateNoWindow = True
+                                    WrapProcess.Start()
+                                    WrapProcess.WaitForExit()
+                                End If
+                        End Select
+
+                        'Mark project as SIGNED
+                        Dim ProjectConfigFileLines() As String = File.ReadAllLines(SelectedProject.ProjectFile)
+                        ProjectConfigFileLines(5) = "SIGNED=TRUE"
+                        File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
+
+                        MsgBox("Game Project is now prepared !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                    End If
                 End If
-            End If
 
-            ReloadProjects()
+                ReloadProjects()
+            Else
+                MsgBox("A broken project has been detected: " + SelectedProject.ProjectFile + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+            End If
         End If
     End Sub
 
     Private Sub InstallProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles InstallProjectButton.Click
         If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
             Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
-
             If File.Exists(SelectedProject.ProjectFile) Then
-                Dim ProjectTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
-                If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
+                If File.ReadAllLines(SelectedProject.ProjectFile).Length > 6 Then
+                    Dim ProjectTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
+                    If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
 
-                    'Identify project type
-                    Dim ProjectType As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
-                    Dim NewInstallWindow As New InstallWindow() With {.ProjectToInstall = SelectedProject, .MountedDrive = MountedDrive, .Title = "Installing " + ProjectTitle}
+                        'Identify project type
+                        Dim ProjectType As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
+                        Dim NewInstallWindow As New InstallWindow() With {.ProjectToInstall = SelectedProject, .MountedDrive = MountedDrive, .Title = "Installing " + ProjectTitle}
 
-                    If ProjectType = "APP" Then
-                        NewInstallWindow.InstallStatus = "Installing Homebrew, please wait..."
-                        NewInstallWindow.InstallApp()
+                        If ProjectType = "APP" Then
+                            NewInstallWindow.InstallStatus = "Installing Homebrew, please wait..."
+                            NewInstallWindow.InstallApp()
 
-                        NewInstallWindow.ShowDialog()
-                    ElseIf ProjectType = "GAME" Then
-                        Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
+                            NewInstallWindow.ShowDialog()
+                        ElseIf ProjectType = "GAME" Then
+                            Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
 
-                        Select Case GameType
-                            Case "PS1"
-                                NewInstallWindow.InstallStatus = "Installing PS1 Game, do not close when it freezes or hangs."
-                                NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
-                                NewInstallWindow.InstallForPS2 = False
-                            Case "PS2"
-                                NewInstallWindow.InstallStatus = "Installing PS2 Game, please wait..."
-                                NewInstallWindow.InstallForPS2 = True
-                        End Select
+                            Select Case GameType
+                                Case "PS1"
+                                    NewInstallWindow.InstallStatus = "Installing PS1 Game, do not close when it freezes or hangs."
+                                    NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
+                                    NewInstallWindow.InstallForPS2 = False
+                                Case "PS2"
+                                    NewInstallWindow.InstallStatus = "Installing PS2 Game, please wait..."
+                                    NewInstallWindow.InstallForPS2 = True
+                            End Select
 
-                        NewInstallWindow.ShowDialog()
+                            NewInstallWindow.ShowDialog()
+                        End If
+
+                    Else
+                        MsgBox("Installation aborted.", MsgBoxStyle.Information, "Aborted")
                     End If
-
                 Else
-                    MsgBox("Installation aborted.", MsgBoxStyle.Information, "Aborted")
+                    MsgBox("A broken project has been detected: " + SelectedProject.ProjectFile + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
                 End If
             Else
                 MsgBox("Could not find the selected project: " + SelectedProject.ProjectFile, MsgBoxStyle.Critical, "Error")
             End If
-
         Else
             MsgBox("No project selected.", MsgBoxStyle.Critical, "Error")
         End If
@@ -596,6 +673,13 @@ Public Class NewMainWindow
             End If
 
             MountedDrive.DriveID = GetHDDID()
+            If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                    Process.Start("ms-settings:optionalfeatures")
+                End If
+            End If
 
             If Dispatcher.CheckAccess() = False Then
                 Dispatcher.BeginInvoke(Sub()
@@ -619,6 +703,13 @@ Public Class NewMainWindow
             MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
 
             MountedDrive.DriveID = GetHDDID()
+            If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                    Process.Start("ms-settings:optionalfeatures")
+                End If
+            End If
 
             InstallProjectButton.IsEnabled = True
             NBDConnectionStatusLabel.Text = "Local Connection:"

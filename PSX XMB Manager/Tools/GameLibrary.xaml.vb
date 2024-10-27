@@ -64,20 +64,26 @@ Public Class GameLibrary
             Dim OutputReader As StreamReader = SevenZip.StandardOutput
             Dim ProcessOutput As String() = OutputReader.ReadToEnd().Split(New String() {vbCrLf}, StringSplitOptions.None)
 
-            For Each Line As String In ProcessOutput
-                If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Or Line.Contains("SLPS_") Or Line.Contains("SCCS_") Or Line.Contains("SLPM_") Or Line.Contains("SLKA_") Then
-                    If Line.Contains("Volume:") Then 'ID found in the ISO Header
-                        GameID = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
-                        Exit For
-                    Else 'ID found in the ISO files
-                        GameID = String.Join(" ", Line.Split(New Char() {}, StringSplitOptions.RemoveEmptyEntries)).Split(" "c)(5).Trim()
-                        Exit For
+            If ProcessOutput.Length > 1 Then
+                For Each Line As String In ProcessOutput
+                    If Line.Contains("SLES_") Or Line.Contains("SLUS_") Or Line.Contains("SCES_") Or Line.Contains("SCUS_") Or Line.Contains("SLPS_") Or Line.Contains("SCCS_") Or Line.Contains("SLPM_") Or Line.Contains("SLKA_") Then
+                        If Line.Contains("Volume:") Then 'ID found in the ISO Header
+                            If Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries).Length > 1 Then
+                                GameID = Line.Split(New String() {"Volume: "}, StringSplitOptions.RemoveEmptyEntries)(1)
+                                Exit For
+                            End If
+                        Else 'ID found in the ISO files
+                            If String.Join(" ", Line.Split(New Char() {}, StringSplitOptions.RemoveEmptyEntries)).Split(" "c).Length > 5 Then
+                                GameID = String.Join(" ", Line.Split(New Char() {}, StringSplitOptions.RemoveEmptyEntries)).Split(" "c)(5).Trim()
+                                Exit For
+                            End If
+                        End If
                     End If
-                End If
-            Next
+                Next
+            End If
         End Using
 
-        If GameID = "" Then
+        If String.IsNullOrEmpty(GameID) Then
             Return "ID not found"
         Else
             Return GameID
@@ -85,9 +91,7 @@ Public Class GameLibrary
     End Function
 
     Private Sub GameLoaderWorker_DoWork(sender As Object, e As DoWorkEventArgs) Handles GameLoaderWorker.DoWork
-
-        'PS2 ISOs
-        For Each GameISO In Directory.GetFiles(e.Argument.ToString, "*.iso", SearchOption.AllDirectories)
+        For Each GameISO In Directory.EnumerateFiles(e.Argument.ToString(), "*.iso", SearchOption.AllDirectories)
 
             Dim NewPS2Game As New PS2Game()
             Dim GameID As String = GetGameID(GameISO)
@@ -101,8 +105,10 @@ Public Class GameLibrary
                 NewPS2Game.GameID = "Unknown ID"
 
                 'Update progress
-                Dispatcher.BeginInvoke(Sub() NewLoadingWindow.LoadProgressBar.Value += 1)
-                Dispatcher.BeginInvoke(Sub() NewLoadingWindow.LoadStatusTextBlock.Text = "Loading ISO " + NewLoadingWindow.LoadProgressBar.Value.ToString() + " of " + ISOCount.ToString())
+                Dispatcher.BeginInvoke(Sub()
+                                           NewLoadingWindow.LoadProgressBar.Value += 1
+                                           NewLoadingWindow.LoadStatusTextBlock.Text = "Loading ISO " + NewLoadingWindow.LoadProgressBar.Value.ToString() + " of " + ISOCount.ToString()
+                                       End Sub)
 
                 'Add to the ListView
                 If GamesListView.Dispatcher.CheckAccess() = False Then
@@ -119,27 +125,31 @@ Public Class GameLibrary
                 NewPS2Game.GameFilePath = GameISO
 
                 'Update progress
-                Dispatcher.BeginInvoke(Sub() NewLoadingWindow.LoadProgressBar.Value += 1)
-                Dispatcher.BeginInvoke(Sub() NewLoadingWindow.LoadStatusTextBlock.Text = "Loading ISO " + NewLoadingWindow.LoadProgressBar.Value.ToString() + " of " + ISOCount.ToString())
+                Dispatcher.BeginInvoke(Sub()
+                                           NewLoadingWindow.LoadProgressBar.Value += 1
+                                           NewLoadingWindow.LoadStatusTextBlock.Text = "Loading ISO " + NewLoadingWindow.LoadProgressBar.Value.ToString() + " of " + ISOCount.ToString()
+                                       End Sub)
 
                 If Utils.IsURLValid("https://psxdatacenter.com/psx2/games2/" + GameID + ".html") Then
                     URLs.Add("https://psxdatacenter.com/psx2/games2/" + GameID + ".html")
-                ElseIf Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
-                    Dispatcher.BeginInvoke(Sub()
-                                               Dim TempBitmapImage = New BitmapImage()
-                                               TempBitmapImage.BeginInit()
-                                               TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
-                                               TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
-                                               TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg", UriKind.RelativeOrAbsolute)
-                                               TempBitmapImage.EndInit()
-                                               NewPS2Game.GameCoverSource = TempBitmapImage
-                                           End Sub)
-                    NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
                 Else
-                    Dispatcher.BeginInvoke(Sub()
-                                               NewPS2Game.GameCoverSource = New BitmapImage(New Uri("/Images/blankcover.png", UriKind.RelativeOrAbsolute))
-                                           End Sub)
-                    NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
+                    If Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
+                        Dispatcher.BeginInvoke(Sub()
+                                                   Dim TempBitmapImage = New BitmapImage()
+                                                   TempBitmapImage.BeginInit()
+                                                   TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                                   TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                                   TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg", UriKind.RelativeOrAbsolute)
+                                                   TempBitmapImage.EndInit()
+                                                   NewPS2Game.GameCoverSource = TempBitmapImage
+                                               End Sub)
+                        NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
+                    Else
+                        Dispatcher.BeginInvoke(Sub()
+                                                   NewPS2Game.GameCoverSource = New BitmapImage(New Uri("/Images/blankcover.png", UriKind.RelativeOrAbsolute))
+                                               End Sub)
+                        NewPS2Game.GameTitle = GetPS2GameTitleFromDatabaseList(GameID)
+                    End If
                 End If
 
                 'Add to the ListView
@@ -150,15 +160,18 @@ Public Class GameLibrary
                 End If
             End If
         Next
-
     End Sub
 
     Private Sub GameLoaderWorker_RunWorkerCompleted(sender As Object, e As RunWorkerCompletedEventArgs) Handles GameLoaderWorker.RunWorkerCompleted
-        NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available infos with missing covers"
-        NewLoadingWindow.LoadProgressBar.Value = 0
-        NewLoadingWindow.LoadProgressBar.Maximum = URLs.Count
-
-        GetGameCovers()
+        If URLs.Count > 0 Then
+            NewLoadingWindow.LoadStatusTextBlock.Text = "Getting " + URLs.Count.ToString() + " available infos with missing covers"
+            NewLoadingWindow.LoadProgressBar.Value = 0
+            NewLoadingWindow.LoadProgressBar.Maximum = URLs.Count
+            GetGameCovers()
+        Else
+            NewLoadingWindow.Close()
+            GamesListView.Items.Refresh()
+        End If
     End Sub
 
     Private Sub GetGameCovers()
@@ -182,90 +195,111 @@ Public Class GameLibrary
 
         'Get game infos
         Dim InfoRows As HtmlElementCollection = PSXDatacenterBrowser.Document.GetElementsByTagName("tr")
-        If InfoRows.Count > 10 Then
+        If InfoRows.Count > 11 Then
 
             'Game Title
-            If InfoRows.Item(4).InnerText IsNot Nothing Then
-                GameTitle = InfoRows.Item(4).InnerText.Split(New String() {"OFFICIAL TITLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(4).InnerText) Then
+                If InfoRows.Item(4).InnerText.Split(New String() {"OFFICIAL TITLE "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GameTitle = InfoRows.Item(4).InnerText.Split(New String() {"OFFICIAL TITLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                End If
             End If
 
             'Game ID
-            If InfoRows.Item(6).InnerText IsNot Nothing Then
-                GameID = InfoRows.Item(6).InnerText.Split(New String() {"SERIAL NUMBER(S) "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(6).InnerText) Then
+                If InfoRows.Item(6).InnerText.Split(New String() {"SERIAL NUMBER(S) "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GameID = InfoRows.Item(6).InnerText.Split(New String() {"SERIAL NUMBER(S) "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                End If
             End If
 
             'Region
-            If InfoRows.Item(7).InnerText IsNot Nothing Then
-                Dim Region As String = InfoRows.Item(7).InnerText.Split(New String() {"REGION "}, StringSplitOptions.RemoveEmptyEntries)(0)
-                Select Case Region
-                    Case "PAL"
-                        GameRegion = "Europe"
-                    Case "NTSC-U"
-                        GameRegion = "US"
-                    Case "NTSC-J"
-                        GameRegion = "Japan"
-                End Select
+            If Not String.IsNullOrEmpty(InfoRows.Item(7).InnerText) Then
+                If InfoRows.Item(7).InnerText.Split(New String() {"REGION "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    Dim Region As String = InfoRows.Item(7).InnerText.Split(New String() {"REGION "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                    Select Case Region
+                        Case "PAL"
+                            GameRegion = "Europe"
+                        Case "NTSC-U"
+                            GameRegion = "US"
+                        Case "NTSC-J"
+                            GameRegion = "Japan"
+                    End Select
+                End If
             End If
 
             'Genre
-            If InfoRows.Item(8).InnerText IsNot Nothing Then
-                GameGenre = InfoRows.Item(8).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(8).InnerText) Then
+                If InfoRows.Item(8).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GameGenre = InfoRows.Item(8).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                End If
             End If
 
             'Developer
-            If InfoRows.Item(9).InnerText IsNot Nothing Then
-                GameDeveloper = InfoRows.Item(9).InnerText.Split(New String() {"DEVELOPER "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(9).InnerText) Then
+                If InfoRows.Item(9).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GameDeveloper = InfoRows.Item(9).InnerText.Split(New String() {"DEVELOPER "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                End If
             End If
 
             'Publisher
-            If InfoRows.Item(10).InnerText IsNot Nothing Then
-                GamePublisher = InfoRows.Item(10).InnerText.Split(New String() {"PUBLISHER "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(10).InnerText) Then
+                If InfoRows.Item(10).InnerText.Split(New String() {"GENRE / STYLE "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GamePublisher = InfoRows.Item(10).InnerText.Split(New String() {"PUBLISHER "}, StringSplitOptions.RemoveEmptyEntries)(0)
 
-                If GamePublisher.Contains("2K") Then
-                    GamePublisherWebsite = "https://2k.com/"
-                ElseIf GamePublisher.Contains("Activision") Then
-                    GamePublisherWebsite = "https://www.activision.com/"
-                ElseIf GamePublisher.Contains("Bandai") Then
-                    GamePublisherWebsite = "http://www.bandai.com/"
-                ElseIf GamePublisher.Contains("Capcom") Then
-                    GamePublisherWebsite = "http://www.capcom.com/"
-                ElseIf GamePublisher.Contains("Electronic Arts") Then
-                    GamePublisherWebsite = "http://ea.com/"
-                ElseIf GamePublisher.Contains("EA Sports") Then
-                    GamePublisherWebsite = "https://www.easports.com/"
-                ElseIf GamePublisher.Contains("Konami") Then
-                    GamePublisherWebsite = "https://www.konami.com/"
-                ElseIf GamePublisher.Contains("Rockstar Games") Then
-                    GamePublisherWebsite = "https://www.rockstargames.com/"
-                ElseIf GamePublisher.Contains("Sega") Then
-                    GamePublisherWebsite = "http://sega.com/"
-                ElseIf GamePublisher.Contains("Sony Computer Entertainment") Then
-                    GamePublisherWebsite = "https://www.sie.com/en/index.html"
-                ElseIf GamePublisher.Contains("THQ") Then
-                    GamePublisherWebsite = "https://www.thqnordic.com/"
-                ElseIf GamePublisher.Contains("Ubisoft") Then
-                    GamePublisherWebsite = "https://www.ubisoft.com/"
+                    If GamePublisher.Contains("2K") Then
+                        GamePublisherWebsite = "https://2k.com/"
+                    ElseIf GamePublisher.Contains("Activision") Then
+                        GamePublisherWebsite = "https://www.activision.com/"
+                    ElseIf GamePublisher.Contains("Bandai") Then
+                        GamePublisherWebsite = "http://www.bandai.com/"
+                    ElseIf GamePublisher.Contains("Capcom") Then
+                        GamePublisherWebsite = "http://www.capcom.com/"
+                    ElseIf GamePublisher.Contains("Electronic Arts") Then
+                        GamePublisherWebsite = "http://ea.com/"
+                    ElseIf GamePublisher.Contains("EA Sports") Then
+                        GamePublisherWebsite = "https://www.easports.com/"
+                    ElseIf GamePublisher.Contains("Konami") Then
+                        GamePublisherWebsite = "https://www.konami.com/"
+                    ElseIf GamePublisher.Contains("Rockstar Games") Then
+                        GamePublisherWebsite = "https://www.rockstargames.com/"
+                    ElseIf GamePublisher.Contains("Sega") Then
+                        GamePublisherWebsite = "http://sega.com/"
+                    ElseIf GamePublisher.Contains("Sony Computer Entertainment") Then
+                        GamePublisherWebsite = "https://www.sie.com/en/index.html"
+                    ElseIf GamePublisher.Contains("THQ") Then
+                        GamePublisherWebsite = "https://www.thqnordic.com/"
+                    ElseIf GamePublisher.Contains("Ubisoft") Then
+                        GamePublisherWebsite = "https://www.ubisoft.com/"
+                    End If
                 End If
             End If
 
             'Release Date
-            If InfoRows.Item(11).InnerText IsNot Nothing Then
-                GameReleaseDate = InfoRows.Item(11).InnerText.Split(New String() {"DATE RELEASED "}, StringSplitOptions.RemoveEmptyEntries)(0)
+            If Not String.IsNullOrEmpty(InfoRows.Item(11).InnerText) Then
+                If InfoRows.Item(11).InnerText.Split(New String() {"DATE RELEASED "}, StringSplitOptions.RemoveEmptyEntries).Length > 0 Then
+                    GameReleaseDate = InfoRows.Item(11).InnerText.Split(New String() {"DATE RELEASED "}, StringSplitOptions.RemoveEmptyEntries)(0)
+                End If
             End If
 
         End If
 
         'Get the game cover
         If PSXDatacenterBrowser.Document.GetElementById("table2") IsNot Nothing Then
-            GameCoverURL = PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")
 
-            Dim TempBitmapImage = New BitmapImage()
-            TempBitmapImage.BeginInit()
-            TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
-            TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
-            TempBitmapImage.UriSource = New Uri(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src"), UriKind.RelativeOrAbsolute)
-            TempBitmapImage.EndInit()
-            GameCoverImage = TempBitmapImage
+            If PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img") IsNot Nothing Then
+                If PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img").Count > 0 Then
+                    GameCoverURL = PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src")
+                End If
+            End If
+
+            If Not String.IsNullOrEmpty(GameCoverURL) Then
+                Dim TempBitmapImage = New BitmapImage()
+                TempBitmapImage.BeginInit()
+                TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                TempBitmapImage.UriSource = New Uri(PSXDatacenterBrowser.Document.GetElementById("table2").GetElementsByTagName("img")(1).GetAttribute("src"), UriKind.RelativeOrAbsolute)
+                TempBitmapImage.EndInit()
+                GameCoverImage = TempBitmapImage
+            End If
 
         ElseIf Utils.IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameID + ".jpg") Then
             Dispatcher.BeginInvoke(Sub()
@@ -281,7 +315,9 @@ Public Class GameLibrary
 
         'Get the game description
         If PSXDatacenterBrowser.Document.GetElementById("table16") IsNot Nothing Then
-            GameDescription = PSXDatacenterBrowser.Document.GetElementById("table16").GetElementsByTagName("tr")(0).InnerText
+            If PSXDatacenterBrowser.Document.GetElementById("table16").GetElementsByTagName("tr").Count > 0 Then
+                GameDescription = PSXDatacenterBrowser.Document.GetElementById("table16").GetElementsByTagName("tr")(0).InnerText
+            End If
         End If
 
         'Add the infos to the game
@@ -307,6 +343,7 @@ Public Class GameLibrary
         'Continue
         AddHandler PSXDatacenterBrowser.DocumentCompleted, AddressOf PSXDatacenterBrowser_DocumentCompleted
 
+        'Resume until all URLs are done
         If CurrentURL < URLs.Count Then
             PSXDatacenterBrowser.Navigate(URLs.Item(CurrentURL))
             CurrentURL += 1
@@ -352,8 +389,13 @@ Public Class GameLibrary
 
         For Each GameTitle As String In File.ReadLines(My.Computer.FileSystem.CurrentDirectory + "\Tools\ps2ids.txt")
             If GameTitle.Contains(GameID) Then
-                FoundGameTitle = GameTitle.Split(";"c)(1)
-                Exit For
+                If GameTitle.Split(";"c).Length > 1 Then
+                    FoundGameTitle = GameTitle.Split(";"c)(1)
+                    Exit For
+                Else
+                    FoundGameTitle = "Unknown PS2 game"
+                    Exit For
+                End If
             End If
         Next
 
@@ -591,9 +633,10 @@ Public Class GameLibrary
 
                 GamesListView.Items.Clear()
                 URLs.Clear()
-                ISOCount = Directory.GetFiles(FBD.SelectedPath, "*.iso", SearchOption.AllDirectories).Count
+                ISOCount = Directory.EnumerateFiles(FBD.SelectedPath, "*.iso", SearchOption.AllDirectories).Count
                 TotalGamesTextBlock.Text = ISOCount.ToString() + " Games"
 
+                GamesListView.ContextMenu = Nothing
                 GamesListView.ContextMenu = PCPS2GamesContextMenu
 
                 NewLoadingWindow = New SyncWindow() With {.Title = "Loading PS2 files", .ShowActivated = True}
@@ -632,6 +675,7 @@ Public Class GameLibrary
             URLs.Clear()
             GamePartitions.Clear()
 
+            GamesListView.ContextMenu = Nothing
             GamesListView.ContextMenu = PSXPS2GamesContextMenu
 
             NewLoadingWindow = New SyncWindow() With {.Title = "Loading games on PSX HDD", .ShowActivated = True, .WindowStartupLocation = WindowStartupLocation.CenterScreen}
@@ -649,11 +693,11 @@ Public Class GameLibrary
 
         If GamesListViewScrollViewer IsNot Nothing Then
             If e.Delta > 0 Then
-                GamesListViewScrollViewer.ScrollToHorizontalOffset(GamesListViewScrollViewer.HorizontalOffset - 3)
+                GamesListViewScrollViewer.ScrollToHorizontalOffset(GamesListViewScrollViewer.HorizontalOffset - 2)
             End If
 
             If e.Delta < 0 Then
-                GamesListViewScrollViewer.ScrollToHorizontalOffset(GamesListViewScrollViewer.HorizontalOffset + 3)
+                GamesListViewScrollViewer.ScrollToHorizontalOffset(GamesListViewScrollViewer.HorizontalOffset + 2)
             End If
         End If
     End Sub
@@ -799,8 +843,13 @@ Public Class GameLibrary
             Dim GameProjectDirectory As String = SelectedPS2Game.GameTitle + " [" + SelectedPS2Game.GameID + "]"
             Dim NewGameProjectDirectory As String = My.Computer.FileSystem.CurrentDirectory + "\Projects\" + SelectedPS2Game.GameTitle + " [" + SelectedPS2Game.GameID + "]"
 
+            'Create new game project directory
+            If Not Directory.Exists(NewGameProjectDirectory) Then
+                Directory.CreateDirectory(NewGameProjectDirectory)
+            End If
+
             Dim NewGameProjectWindow As New NewGameProject() With {.ShowActivated = True}
-            Dim NewGameEditor As New GameEditor() With {.ProjectDirectory = NewGameProjectDirectory, .Title = "Game Ressources Editor - " + NewGameProjectDirectory}
+            Dim NewGameEditor As New GameEditor() With {.ProjectDirectory = NewGameProjectDirectory, .Title = "Game Ressources Editor - " + NewGameProjectDirectory, .AutoSave = True}
 
             'Set project information
             NewGameProjectWindow.ProjectISOFileTextBox.Text = SelectedPS2Game.GameFilePath
@@ -809,11 +858,6 @@ Public Class GameLibrary
             NewGameProjectWindow.ProjectTitleTextBox.Text = SelectedPS2Game.GameTitle
             NewGameProjectWindow.ProjectIDTextBox.Text = SelectedPS2Game.GameID.Replace("-", "_").Insert(8, ".")
             NewGameProjectWindow.ProjectUninstallMsgTextBox.Text = "Do you want to uninstall this game ?"
-
-            'Create game project directory
-            If Not Directory.Exists(NewGameProjectDirectory) Then
-                Directory.CreateDirectory(NewGameProjectDirectory)
-            End If
 
             'Write Project settings to .CFG
             Using ProjectWriter As New StreamWriter(My.Computer.FileSystem.CurrentDirectory + "\Projects\" + SelectedPS2Game.GameTitle + ".CFG", False)
@@ -927,7 +971,6 @@ Public Class GameLibrary
 
             'Open the Game Editor (in case of additional changes)
             NewGameEditor.Show()
-            NewGameEditor.AutoSave = True
 
             'Open the Game Editor and try to load values from PSXDatacenter
             If Utils.IsURLValid("https://psxdatacenter.com/psx2/games2/" + SelectedPS2Game.GameID + ".html") Then
@@ -936,7 +979,6 @@ Public Class GameLibrary
                 'Apply cover, title and region only if no data is available on PSXDatacenter
                 NewGameEditor.ApplyKnownValues(SelectedPS2Game.GameID, SelectedPS2Game.GameTitle)
             End If
-
         End If
     End Sub
 
@@ -973,9 +1015,10 @@ Public Class GameLibrary
                 GamesListView.Items.Clear()
                 URLs.Clear()
 
-                ISOCount = Directory.GetFiles(CurrentDirectoryTextBlock.Text, "*.iso", SearchOption.AllDirectories).Count
+                ISOCount = Directory.EnumerateFiles(CurrentDirectoryTextBlock.Text, "*.iso", SearchOption.AllDirectories).Count
                 TotalGamesTextBlock.Text = ISOCount.ToString() + " Games"
 
+                GamesListView.ContextMenu = Nothing
                 GamesListView.ContextMenu = PCPS2GamesContextMenu
 
                 NewLoadingWindow = New SyncWindow() With {.Title = "Loading PS2 files", .ShowActivated = True}
