@@ -55,8 +55,16 @@ The installed game or homebrew will show up on the XMB where you can start it li
 ## Used tools from other developers
 | Tool | Developer |
 |-----|-----|
-| hdl_dump | https://github.com/ps2homebrew/hdl-dump |
+| dd | [http://www.chrysocome.net/dd](http://www.chrysocome.net/dd) |
+| hdl_dump | [https://github.com/ps2homebrew/hdl-dump](https://github.com/ps2homebrew/hdl-dump) |
+| kelftool | [https://github.com/xfwcfw/kelftool](https://github.com/xfwcfw/kelftool) |
 | PAKerUtility | [El_isra](https://github.com/israpps/PAKerUtility) |
-| pfsshell & pfsfuse | https://github.com/ps2homebrew/pfsshell |
+| pfsshell & pfsfuse | [https://github.com/ps2homebrew/pfsshell](https://github.com/ps2homebrew/pfsshell) |
 | SCEDoormat_NoME | krHACKen |
 | stargazer | [Brawl345](https://github.com/Brawl345/stargazer) |
+
+## Other used code
+| Tool | Gist |
+|-----|-----|
+| PSX_rel.cpp | [https://gist.github.com/balika011/220dd4147ddc2a32efbaedfb8ebcd387#file-psx_rel-cpp](https://gist.github.com/balika011/220dd4147ddc2a32efbaedfb8ebcd387#file-psx_rel-cpp) |
+| xosdmain_decomp.cpp | [https://gist.github.com/balika011/336b348b43fe1d10140513d02dba3442#file-xosdmain_decomp-cpp](https://gist.github.com/balika011/336b348b43fe1d10140513d02dba3442#file-xosdmain_decomp-cpp) |
