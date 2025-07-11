@@ -13,12 +13,28 @@ The installed game or homebrew will show up on the XMB where you can start it li
   - A right click on a game will give you the possibility to quickly create a PS1 game project for the PSX.
 - Mount PS2 games from PSX HDD and modify/update the partition header
   - Change game properties / Update OPL-Launcher
-- HDD Partition Manager (Create partition, Remove partition (destructive), Change partition visibility)
+- HDD Partition Manager (Create partition, Remove partition (destructive), Change partition visibility, Mount/Unmount partition)
 - PS2 Game Partition Manager (Dump partition header, Change game title, flags, DMA)
 - XMB Files Explorer (XMB Tools)
   - Open a _system or xosd folder to load, view and edit its content
   - Text Editor for .xml & .dic files with syntax highlighting
   - Translate .dic & .xml files automatically in most languages
+- Utilities
+  - HDD Utilities
+    - Create & Restore full raw HDD backups
+    - Install POPStarter on the connected PSX HDD
+  - Converters
+    - Convert CUE backups to POPS (VCD) format
+    - Convert BIN/CUE backups to ISO format (PS1 & PS2)
+  - Extractors
+    - Extract STAR files using stargazer
+    - Extract PAK files using PAKerUtility
+  - Decryptors
+    - Decrypt KELF files using kelftool
+    - Decrypt REL files
+  - Decompressors/Unpackers
+    - Decompress a decrypted xosdmain file
+    - Unpack a PS2/PSX BIOS file
 
 ## Notes
 - Requires FMCB installed on your memory card and Open PS2 Loader (to load PS2 games)
@@ -40,5 +56,7 @@ The installed game or homebrew will show up on the XMB where you can start it li
 | Tool | Developer |
 |-----|-----|
 | hdl_dump | https://github.com/ps2homebrew/hdl-dump |
+| PAKerUtility | [El_isra](https://github.com/israpps/PAKerUtility) |
 | pfsshell & pfsfuse | https://github.com/ps2homebrew/pfsshell |
 | SCEDoormat_NoME | krHACKen |
+| stargazer | [Brawl345](https://github.com/Brawl345/stargazer) |
