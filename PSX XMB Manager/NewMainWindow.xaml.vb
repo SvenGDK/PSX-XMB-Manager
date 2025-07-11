@@ -8,10 +8,11 @@ Imports PSX_XMB_Manager.Utils
 
 Public Class NewMainWindow
 
-    Private MountedDrive As MountedPSXDrive
+    Private MountedDrive As MountedPSXDrive = Nothing
     Private WNBDClientPath As String = ""
+    Private DokanClientPath As String = ""
 
-    Private WithEvents ConnectDelay As New DispatcherTimer With {.Interval = TimeSpan.FromSeconds(2)}
+    Private WithEvents ConnectDelay As New DispatcherTimer With {.Interval = TimeSpan.FromMilliseconds(1250)}
     Private WithEvents ContentDownloader As New WebClient()
 
     Private Sub NewMainWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
@@ -28,12 +29,12 @@ Public Class NewMainWindow
                 If Not String.IsNullOrEmpty(Path.GetFullPath(SavedProject)) Then
                     NewCBProjectItem.ProjectFile = Path.GetFullPath(SavedProject)
                 Else
-                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to recreate it.", MsgBoxStyle.Critical, "Error")
                 End If
                 If Not String.IsNullOrEmpty(Path.GetFileNameWithoutExtension(SavedProject)) Then
                     NewCBProjectItem.ProjectName = Path.GetFileNameWithoutExtension(SavedProject)
                 Else
-                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to recreate it.", MsgBoxStyle.Critical, "Error")
                 End If
 
                 'Get project state of saved projects
@@ -42,10 +43,10 @@ Public Class NewMainWindow
                     If File.ReadAllLines(SavedProject)(5).Split("="c).Length > 1 Then
                         ProjectState = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
                     Else
-                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to recreate it.", MsgBoxStyle.Critical, "Error")
                     End If
                 Else
-                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to recreate it.", MsgBoxStyle.Critical, "Error")
                 End If
 
                 If ProjectState = "FALSE" Then
@@ -61,7 +62,7 @@ Public Class NewMainWindow
         ProjectListComboBox.DisplayMemberPath = "ProjectName"
         PreparedProjectsComboBox.DisplayMemberPath = "ProjectName"
 
-        'Set wnbd-client
+        'Set wnbd-client path
         If File.Exists(My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe") Then
             'Use installed wnbd client
             WNBDClientPath = My.Computer.FileSystem.SpecialDirectories.ProgramFiles + "\Ceph\bin\wnbd-client.exe"
@@ -72,8 +73,9 @@ Public Class NewMainWindow
     End Sub
 
     Private Sub NewMainWindow_ContentRendered(sender As Object, e As EventArgs) Handles Me.ContentRendered
-        'Check if NBD driver is installed
         If Not String.IsNullOrEmpty(WNBDClientPath) Then
+
+            'Check if WNBD is installed
             Using WNBDClient As New Process()
                 WNBDClient.StartInfo.FileName = WNBDClientPath
                 WNBDClient.StartInfo.Arguments = "-v"
@@ -82,9 +84,7 @@ Public Class NewMainWindow
                 WNBDClient.StartInfo.CreateNoWindow = True
                 WNBDClient.Start()
 
-                Dim OutputReader As StreamReader = WNBDClient.StandardOutput
-                Dim ProcessOutput As String = OutputReader.ReadToEnd()
-                Dim SplittedOutput As String() = ProcessOutput.Split({vbCrLf}, StringSplitOptions.None)
+                Dim SplittedOutput As String() = WNBDClient.StandardOutput.ReadToEnd().Split({vbCrLf}, StringSplitOptions.None)
 
                 Dim NBDDriverVersion As String
                 If SplittedOutput.Length > 2 Then
@@ -99,37 +99,29 @@ Public Class NewMainWindow
                 End If
             End Using
 
-            'Check if NBD is connected to the PSX or if a HDD is connected locally
+            'Check if NBD is connected to the PSX
             Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
-            If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then 'NBD
+            If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then
+
                 MountedDrive.NBDDriveName = ConnectedNBDDriveName
 
-                If PSXIPTextBox.Dispatcher.CheckAccess() = False Then
-                    PSXIPTextBox.Dispatcher.BeginInvoke(Sub()
-                                                            PSXIPTextBox.Text = GetConnectedNBDIP(WNBDClientPath, ConnectedNBDDriveName)
-                                                        End Sub)
+                Dim ConnectedIP As String = GetConnectedNBDIP(WNBDClientPath, ConnectedNBDDriveName)
+                If Not String.IsNullOrEmpty(ConnectedIP) Then
+                    PSXIPTextBox.Text = ConnectedIP
+                    MountedDrive.ConnectedOnIP = ConnectedIP
                 Else
-                    PSXIPTextBox.Text = GetConnectedNBDIP(WNBDClientPath, ConnectedNBDDriveName)
+                    MsgBox("Failed to retrieve the connected NBD IP", MsgBoxStyle.Critical)
                 End If
 
                 'Get HDL Drive Name
                 Dim HDLDriveName As String = GetHDLDriveName()
                 If Not String.IsNullOrEmpty(HDLDriveName) Then
-
-                    'Update UI
-                    If MountStatusLabel.CheckAccess() = False Then
-                        MountStatusLabel.Dispatcher.BeginInvoke(Sub()
-                                                                    MountStatusLabel.Text = "On " + HDLDriveName
-                                                                    MountStatusLabel.Foreground = Brushes.Green
-                                                                End Sub)
-                    Else
-                        MountStatusLabel.Text = "On " + HDLDriveName
-                        MountStatusLabel.Foreground = Brushes.Green
-                    End If
-
+                    MountStatusLabel.Text = "On " + HDLDriveName
+                    MountStatusLabel.Foreground = Brushes.Green
                     MountedDrive.HDLDriveName = HDLDriveName
                 End If
 
+                'Get HDD path using wmic
                 MountedDrive.DriveID = GetHDDID()
                 If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
                     If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
@@ -143,15 +135,17 @@ Public Class NewMainWindow
                 NBDConnectionLabel.Text = "Connected"
                 NBDConnectionLabel.Foreground = Brushes.Green
                 ConnectButton.Content = "Disconnect"
-
             Else
-                If Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
-                    Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+                'Check for local HDD
+                Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+                If Not String.IsNullOrEmpty(ConnectedLocalHDDDriveName) Then
+
                     MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
                     MountStatusLabel.Foreground = Brushes.Green
-                    MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
 
+                    MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
                     MountedDrive.DriveID = GetHDDID()
+
                     If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
                         If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
                                   "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
@@ -188,7 +182,7 @@ Public Class NewMainWindow
                 End If
             Next
             If Not String.IsNullOrEmpty(DokanLibraryFolder) Then
-                'Check if NBD driver is installed
+                DokanClientPath = DokanLibraryFolder + "\dokanctl.exe"
                 Using DokanCTL As New Process()
                     DokanCTL.StartInfo.FileName = DokanLibraryFolder + "\dokanctl.exe"
                     DokanCTL.StartInfo.Arguments = "/v"
@@ -263,49 +257,107 @@ Public Class NewMainWindow
         End If
     End Sub
 
-    Public Sub ReloadProjects()
-        ProjectListComboBox.Items.Clear()
-        PreparedProjectsComboBox.Items.Clear()
+    Private Sub ConnectDelay_Tick(sender As Object, e As EventArgs) Handles ConnectDelay.Tick
+        'Get drive properties after the connect delay
+        Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
+        If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then
+            MountedDrive.NBDDriveName = ConnectedNBDDriveName
 
-        If Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
-            'Load saved projects
-            For Each SavedProject In Directory.GetFiles(My.Computer.FileSystem.CurrentDirectory + "\Projects", "*.CFG")
+            'Get HDL Drive Name
+            Dim HDLDriveName As String = GetHDLDriveName()
+            If Not String.IsNullOrEmpty(HDLDriveName) Then
 
-                Dim NewCBProjectItem As New ComboBoxProjectItem()
-                If Not String.IsNullOrEmpty(Path.GetFullPath(SavedProject)) Then
-                    NewCBProjectItem.ProjectFile = Path.GetFullPath(SavedProject)
+                'Update UI
+                If MountStatusLabel.CheckAccess() = False Then
+                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
+                                                                MountStatusLabel.Text = "On " + HDLDriveName
+                                                                MountStatusLabel.Foreground = Brushes.Green
+                                                            End Sub)
                 Else
-                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
-                End If
-                If Not String.IsNullOrEmpty(Path.GetFileNameWithoutExtension(SavedProject)) Then
-                    NewCBProjectItem.ProjectName = Path.GetFileNameWithoutExtension(SavedProject)
-                Else
-                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
-                End If
-
-                'Get project state of saved projects
-                Dim ProjectState As String = ""
-                If File.ReadAllLines(SavedProject).Length > 5 Then
-                    If File.ReadAllLines(SavedProject)(5).Split("="c).Length > 1 Then
-                        ProjectState = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
-                    Else
-                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
-                    End If
-                Else
-                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    MountStatusLabel.Text = "On " + HDLDriveName
+                    MountStatusLabel.Foreground = Brushes.Green
                 End If
 
-                If ProjectState = "FALSE" Then
-                    ProjectListComboBox.Items.Add(NewCBProjectItem)
-                Else
-                    ProjectListComboBox.Items.Add(NewCBProjectItem)
-                    PreparedProjectsComboBox.Items.Add(NewCBProjectItem)
+                MountedDrive.HDLDriveName = HDLDriveName
+            End If
+
+            'Get HDD drive path
+            MountedDrive.DriveID = GetHDDID()
+            If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                    Process.Start("ms-settings:optionalfeatures")
                 End If
-            Next
+            End If
+
+            If Dispatcher.CheckAccess() = False Then
+                Dispatcher.BeginInvoke(Sub()
+                                           InstallProjectButton.IsEnabled = True
+                                           NBDConnectionLabel.Text = "Connected"
+                                           NBDConnectionLabel.Foreground = Brushes.Green
+                                           ConnectButton.Content = "Disconnect"
+                                       End Sub)
+            Else
+                InstallProjectButton.IsEnabled = True
+                NBDConnectionLabel.Text = "Connected"
+                NBDConnectionLabel.Foreground = Brushes.Green
+                ConnectButton.Content = "Disconnect"
+            End If
+
+            'Display warnings if HDD could not be determined
+            If String.IsNullOrEmpty(MountedDrive.HDLDriveName) Then
+                MsgBox("Could not determine the HDD drive name using 'hdl_dump'." + vbCrLf + "Make sure a PS2/PSX formatted HDD is connected.", MsgBoxStyle.Exclamation, "Warning")
+            End If
+            If String.IsNullOrEmpty(MountedDrive.DriveID) Then
+                MsgBox("Could not determine the full HDD drive path using 'wmic'." + vbCrLf + "Make sure 'wmic' is installed on your PC and try again.", MsgBoxStyle.Exclamation, "Warning")
+            End If
+
+            MsgBox("PSX HDD is now connected." + vbCrLf + "You can now install a project on the PSX.", MsgBoxStyle.Information, "Success")
         Else
-            'Set up a projects directory to save all created projects
-            Directory.CreateDirectory(My.Computer.FileSystem.CurrentDirectory + "\Projects")
+            'Check for local HDD
+            Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
+            If Not String.IsNullOrEmpty(ConnectedLocalHDDDriveName) Then
+                MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
+                MountStatusLabel.Foreground = Brushes.Green
+                MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
+
+                MountedDrive.DriveID = GetHDDID()
+                If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
+                    If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
+                                  "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
+                                  "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
+                        Process.Start("ms-settings:optionalfeatures")
+                    End If
+                End If
+
+                'Display warnings if HDD could not be determined
+                If String.IsNullOrEmpty(MountedDrive.HDLDriveName) Then
+                    MsgBox("Could not determine the HDD drive name using 'hdl_dump'." + vbCrLf + "Make sure a PS2/PSX formatted HDD is connected.", MsgBoxStyle.Exclamation, "Warning")
+                End If
+                If String.IsNullOrEmpty(MountedDrive.DriveID) Then
+                    MsgBox("Could not determine the full HDD drive path using 'wmic'." + vbCrLf + "Make sure 'wmic' is installed on your PC and try again.", MsgBoxStyle.Exclamation, "Warning")
+                End If
+
+                InstallProjectButton.IsEnabled = True
+                NBDConnectionStatusLabel.Text = "Local Connection:"
+                NBDConnectionLabel.Text = "Connected"
+
+                EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
+                EnterIPLabel.TextAlignment = TextAlignment.Center
+                ConnectButton.IsEnabled = False
+                PSXIPTextBox.IsEnabled = False
+                PSXIPTextBox.Text = "Local Connection"
+                ConnectButton.Foreground = Brushes.Black
+
+                NBDConnectionLabel.Foreground = Brushes.Green
+                ConnectButton.Content = "Disabled"
+            Else
+                MsgBox("Could not connect to the PSX." + vbCrLf + "Please check the IP address.", MsgBoxStyle.Critical, "Error")
+            End If
         End If
+
+        ConnectDelay.Stop()
     End Sub
 
 #Region "Menu"
@@ -356,7 +408,7 @@ Public Class NewMainWindow
         If MountedDrive.HDLDriveName = "" Then
             MsgBox("Please connect to the NBD server first.", MsgBoxStyle.Information)
         Else
-            Dim NewPartitionManager As New PartitionManager() With {.ShowActivated = True, .MountedDrive = MountedDrive}
+            Dim NewPartitionManager As New PartitionManager() With {.ShowActivated = True, .MountedDrive = MountedDrive, .DokanCTLPath = DokanClientPath}
             NewPartitionManager.Show()
         End If
     End Sub
@@ -384,9 +436,59 @@ Public Class NewMainWindow
         Process.Start(New ProcessStartInfo("https://github.com/dokan-dev/dokany/releases") With {.UseShellExecute = True})
     End Sub
 
+    Private Sub UtilitiesMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles UtilitiesMenuItem.Click
+        Dim NewUtilities As New Utilities() With {.ShowActivated = True, .MountedDrive = MountedDrive}
+        NewUtilities.Show()
+    End Sub
+
 #End Region
 
 #Region "Projects"
+
+    Public Sub ReloadProjects()
+        ProjectListComboBox.Items.Clear()
+        PreparedProjectsComboBox.Items.Clear()
+
+        If Directory.Exists(My.Computer.FileSystem.CurrentDirectory + "\Projects") Then
+            'Load saved projects
+            For Each SavedProject In Directory.GetFiles(My.Computer.FileSystem.CurrentDirectory + "\Projects", "*.CFG")
+
+                Dim NewCBProjectItem As New ComboBoxProjectItem()
+                If Not String.IsNullOrEmpty(Path.GetFullPath(SavedProject)) Then
+                    NewCBProjectItem.ProjectFile = Path.GetFullPath(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+                If Not String.IsNullOrEmpty(Path.GetFileNameWithoutExtension(SavedProject)) Then
+                    NewCBProjectItem.ProjectName = Path.GetFileNameWithoutExtension(SavedProject)
+                Else
+                    MsgBox("A broken project has been detected: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+
+                'Get project state of saved projects
+                Dim ProjectState As String = ""
+                If File.ReadAllLines(SavedProject).Length > 5 Then
+                    If File.ReadAllLines(SavedProject)(5).Split("="c).Length > 1 Then
+                        ProjectState = File.ReadAllLines(SavedProject)(5).Split("="c)(1)
+                    Else
+                        MsgBox("Cannot read the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    End If
+                Else
+                    MsgBox("Cannot find the project state of: " + SavedProject + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                End If
+
+                If ProjectState = "FALSE" Then
+                    ProjectListComboBox.Items.Add(NewCBProjectItem)
+                Else
+                    ProjectListComboBox.Items.Add(NewCBProjectItem)
+                    PreparedProjectsComboBox.Items.Add(NewCBProjectItem)
+                End If
+            Next
+        Else
+            'Set up a projects directory to save all created projects
+            Directory.CreateDirectory(My.Computer.FileSystem.CurrentDirectory + "\Projects")
+        End If
+    End Sub
 
     Private Sub NewHomebrewProjectMenuItem_Click(sender As Object, e As RoutedEventArgs) Handles NewHomebrewProjectButton.Click
         Dim NewHomebrewProjectWindow As New NewAppProject() With {.ShowActivated = True}
@@ -538,6 +640,7 @@ Public Class NewMainWindow
                         File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
 
                         MsgBox("Homebrew Project prepared with success !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                        Activate()
                     Else
 
                         'PS1 games get POPSTARTER and PS2 games get OPL-Launcher
@@ -589,6 +692,7 @@ Public Class NewMainWindow
                         File.WriteAllLines(SelectedProject.ProjectFile, ProjectConfigFileLines)
 
                         MsgBox("Game Project is now prepared !" + vbCrLf + "You can now proceed with the installation on the PSX.", MsgBoxStyle.Information, "Success")
+                        Activate()
                     End If
                 End If
 
@@ -600,135 +704,55 @@ Public Class NewMainWindow
     End Sub
 
     Private Sub InstallProjectButton_Click(sender As Object, e As RoutedEventArgs) Handles InstallProjectButton.Click
-        If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
-            Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
-            If File.Exists(SelectedProject.ProjectFile) Then
-                If File.ReadAllLines(SelectedProject.ProjectFile).Length > 6 Then
-                    Dim ProjectTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
-                    If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
+        If String.IsNullOrEmpty(MountedDrive.HDLDriveName) Then
+            MsgBox("Please connect to the NBD server first.", MsgBoxStyle.Information)
+        Else
+            If PreparedProjectsComboBox.SelectedItem IsNot Nothing Then
+                Dim SelectedProject As ComboBoxProjectItem = CType(PreparedProjectsComboBox.SelectedItem, ComboBoxProjectItem)
+                If File.Exists(SelectedProject.ProjectFile) Then
+                    If File.ReadAllLines(SelectedProject.ProjectFile).Length > 6 Then
+                        Dim ProjectTitle As String = File.ReadAllLines(SelectedProject.ProjectFile)(0).Split("="c)(1)
+                        If MsgBox("Do you really want to install " + ProjectTitle + " on your PSX ?", MsgBoxStyle.YesNo, "Please confirm") = MsgBoxResult.Yes Then
 
-                        'Identify project type
-                        Dim ProjectType As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
-                        Dim NewInstallWindow As New InstallWindow() With {.ProjectToInstall = SelectedProject, .MountedDrive = MountedDrive, .Title = "Installing " + ProjectTitle}
+                            'Identify project type
+                            Dim ProjectType As String = File.ReadAllLines(SelectedProject.ProjectFile)(4).Split("="c)(1)
+                            Dim NewInstallWindow As New InstallWindow() With {.ProjectToInstall = SelectedProject, .MountedDrive = MountedDrive, .Title = "Installing " + ProjectTitle}
 
-                        If ProjectType = "APP" Then
-                            NewInstallWindow.InstallStatus = "Installing Homebrew, please wait..."
-                            NewInstallWindow.InstallApp()
+                            If ProjectType = "APP" Then
+                                NewInstallWindow.InstallStatus = "Installing Homebrew, please wait..."
+                                NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
+                                NewInstallWindow.ShowDialog()
+                            ElseIf ProjectType = "GAME" Then
+                                Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
 
-                            NewInstallWindow.ShowDialog()
-                        ElseIf ProjectType = "GAME" Then
-                            Dim GameType As String = File.ReadAllLines(SelectedProject.ProjectFile)(6).Split("="c)(1)
+                                Select Case GameType
+                                    Case "PS1"
+                                        NewInstallWindow.InstallStatus = "Installing PS1 Game, do not close when it freezes or hangs."
+                                        NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
+                                        NewInstallWindow.InstallForPS1 = True
+                                    Case "PS2"
+                                        NewInstallWindow.InstallStatus = "Installing PS2 Game, please wait..."
+                                        NewInstallWindow.InstallForPS2 = True
+                                End Select
 
-                            Select Case GameType
-                                Case "PS1"
-                                    NewInstallWindow.InstallStatus = "Installing PS1 Game, do not close when it freezes or hangs."
-                                    NewInstallWindow.InstallationProgressBar.IsIndeterminate = True
-                                    NewInstallWindow.InstallForPS2 = False
-                                Case "PS2"
-                                    NewInstallWindow.InstallStatus = "Installing PS2 Game, please wait..."
-                                    NewInstallWindow.InstallForPS2 = True
-                            End Select
+                                NewInstallWindow.ShowDialog()
+                            End If
 
-                            NewInstallWindow.ShowDialog()
+                        Else
+                            MsgBox("Installation aborted.", MsgBoxStyle.Information, "Aborted")
                         End If
-
                     Else
-                        MsgBox("Installation aborted.", MsgBoxStyle.Information, "Aborted")
+                        MsgBox("A broken project has been detected: " + SelectedProject.ProjectFile + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
                     End If
                 Else
-                    MsgBox("A broken project has been detected: " + SelectedProject.ProjectFile + vbCrLf + vbCrLf + "It's recommended to remove this project and to re-create it.", MsgBoxStyle.Critical, "Error")
+                    MsgBox("Could not find the selected project: " + SelectedProject.ProjectFile, MsgBoxStyle.Critical, "Error")
                 End If
             Else
-                MsgBox("Could not find the selected project: " + SelectedProject.ProjectFile, MsgBoxStyle.Critical, "Error")
+                MsgBox("No project selected.", MsgBoxStyle.Critical, "Error")
             End If
-        Else
-            MsgBox("No project selected.", MsgBoxStyle.Critical, "Error")
         End If
     End Sub
 
 #End Region
-
-    Private Sub ConnectDelay_Tick(sender As Object, e As EventArgs) Handles ConnectDelay.Tick
-        'Get drive properties after the connect delay
-        Dim ConnectedNBDDriveName As String = IsNBDConnected(WNBDClientPath)
-        If Not String.IsNullOrEmpty(ConnectedNBDDriveName) Then
-            MountedDrive.NBDDriveName = ConnectedNBDDriveName
-
-            'Get HDL Drive Name
-            Dim HDLDriveName As String = GetHDLDriveName()
-            If Not String.IsNullOrEmpty(HDLDriveName) Then
-
-                'Update UI
-                If MountStatusLabel.CheckAccess() = False Then
-                    MountStatusLabel.Dispatcher.BeginInvoke(Sub()
-                                                                MountStatusLabel.Text = "On " + HDLDriveName
-                                                                MountStatusLabel.Foreground = Brushes.Green
-                                                            End Sub)
-                Else
-                    MountStatusLabel.Text = "On " + HDLDriveName
-                    MountStatusLabel.Foreground = Brushes.Green
-                End If
-
-                MountedDrive.HDLDriveName = HDLDriveName
-            End If
-
-            MountedDrive.DriveID = GetHDDID()
-            If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
-                If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
-                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
-                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
-                    Process.Start("ms-settings:optionalfeatures")
-                End If
-            End If
-
-            If Dispatcher.CheckAccess() = False Then
-                Dispatcher.BeginInvoke(Sub()
-                                           InstallProjectButton.IsEnabled = True
-                                           NBDConnectionLabel.Text = "Connected"
-                                           NBDConnectionLabel.Foreground = Brushes.Green
-                                           ConnectButton.Content = "Disconnect"
-                                       End Sub)
-            Else
-                InstallProjectButton.IsEnabled = True
-                NBDConnectionLabel.Text = "Connected"
-                NBDConnectionLabel.Foreground = Brushes.Green
-                ConnectButton.Content = "Disconnect"
-            End If
-
-            MsgBox("PSX HDD is now connected." + vbCrLf + "You can now install a project on the PSX.", MsgBoxStyle.Information, "Success")
-        ElseIf Not String.IsNullOrEmpty(IsLocalHDDConnected()) Then 'Local HDD
-            Dim ConnectedLocalHDDDriveName As String = IsLocalHDDConnected()
-            MountStatusLabel.Text = "on " + ConnectedLocalHDDDriveName
-            MountStatusLabel.Foreground = Brushes.Green
-            MountedDrive.HDLDriveName = ConnectedLocalHDDDriveName
-
-            MountedDrive.DriveID = GetHDDID()
-            If MountedDrive.DriveID = "WMIC_INSTALL_REQUIRED" Then
-                If MsgBox("WMIC is not installed on your system but is required." + vbCrLf +
-                              "Please install it first from 'Optional features' in your Windows Settings before continuing." + vbCrLf +
-                              "Restart PSX XMB Manager when done.", MsgBoxStyle.YesNo, "Warning") = MsgBoxResult.Yes Then
-                    Process.Start("ms-settings:optionalfeatures")
-                End If
-            End If
-
-            InstallProjectButton.IsEnabled = True
-            NBDConnectionStatusLabel.Text = "Local Connection:"
-            NBDConnectionLabel.Text = "Connected"
-
-            EnterIPLabel.Text = "Local PS2/PSX HDD detected & connected."
-            EnterIPLabel.TextAlignment = TextAlignment.Center
-            ConnectButton.IsEnabled = False
-            PSXIPTextBox.IsEnabled = False
-            PSXIPTextBox.Text = "Local Connection"
-            ConnectButton.Foreground = Brushes.Black
-
-            NBDConnectionLabel.Foreground = Brushes.Green
-            ConnectButton.Content = "Disabled"
-        Else
-            MsgBox("Could not connect to the PSX." + vbCrLf + "Please check the IP address.", MsgBoxStyle.Critical, "Error")
-        End If
-
-        ConnectDelay.Stop()
-    End Sub
 
 End Class

@@ -234,18 +234,14 @@ Public Class Utils
 
     Public Shared Function GetResizedBitmap(ImageLocation As String, NewWidth As Integer, NewHeight As Integer) As Bitmap
         Try
-            If NetworkInterface.GetIsNetworkAvailable Then
-                Dim Request As WebRequest = WebRequest.Create(ImageLocation)
-                Dim Response As WebResponse = Request.GetResponse()
-                Dim ResponseStream As Stream = Response.GetResponseStream()
+            Dim Request As WebRequest = WebRequest.Create(ImageLocation)
+            Dim Response As WebResponse = Request.GetResponse()
+            Dim ResponseStream As Stream = Response.GetResponseStream()
 
-                Dim OriginalBitmap As New Bitmap(ResponseStream)
-                Dim ResizedBitmap As New Bitmap(OriginalBitmap, New Size(NewWidth, NewHeight))
+            Dim OriginalBitmap As New Bitmap(ResponseStream)
+            Dim ResizedBitmap As New Bitmap(OriginalBitmap, New Size(NewWidth, NewHeight))
 
-                Return ResizedBitmap
-            Else
-                Return Nothing
-            End If
+            Return ResizedBitmap
         Catch Ex As Exception
             Return Nothing
         End Try

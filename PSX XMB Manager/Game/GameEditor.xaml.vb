@@ -23,88 +23,125 @@ Public Class GameEditor
 
     Private Sub SaveButton_Click(sender As Object, e As RoutedEventArgs) Handles SaveButton.Click
         If Not String.IsNullOrEmpty(ProjectDirectory) Then
+
+            Dim Quantizer As New WuQuantizer()
+
+            'Create the res\image directory
             If Not Directory.Exists(ProjectDirectory + "\res\image") Then
                 Directory.CreateDirectory(ProjectDirectory + "\res\image")
             End If
 
-            Dim Quantizer As New WuQuantizer()
-
             'Save selected XMB cover as compressed PNG
             If CoverPictureBox.Tag IsNot Nothing AndAlso Not File.Exists(ProjectDirectory + "\res\jkt_001.png") Then
-                Dim Cover1Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 140, 200)
-                Dim Cover2Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 74, 108)
+                If TypeOf CoverPictureBox.Tag Is String Then
+                    Dim Cover1Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 140, 200)
+                    Dim Cover2Bitmap As Bitmap = Utils.GetResizedBitmap(CoverPictureBox.Tag.ToString(), 74, 108)
 
-                If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
-                End If
-                If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
-                End If
+                    If Cover1Bitmap IsNot Nothing AndAlso Cover2Bitmap IsNot Nothing Then
+                        If Cover1Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                            Utils.ConvertTo32bppAndDisposeOriginal(Cover1Bitmap)
+                        End If
+                        If Cover2Bitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                            Utils.ConvertTo32bppAndDisposeOriginal(Cover2Bitmap)
+                        End If
 
-                Try
-                    Using CompressedImage = Quantizer.QuantizeImage(Cover1Bitmap)
-                        CompressedImage.Save(ProjectDirectory + "\res\jkt_001.png", Imaging.ImageFormat.Png)
-                    End Using
-                    Using CompressedImage = Quantizer.QuantizeImage(Cover2Bitmap)
-                        CompressedImage.Save(ProjectDirectory + "\res\jkt_002.png", Imaging.ImageFormat.Png)
-                    End Using
-                Catch ex As Exception
-                    MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
-                Finally
-                    Cover1Bitmap.Dispose()
-                    Cover2Bitmap.Dispose()
-                End Try
+                        Try
+                            Using CompressedImage = Quantizer.QuantizeImage(Cover1Bitmap)
+                                CompressedImage?.Save(ProjectDirectory + "\res\jkt_001.png", Imaging.ImageFormat.Png)
+                            End Using
+                            Using CompressedImage = Quantizer.QuantizeImage(Cover2Bitmap)
+                                CompressedImage?.Save(ProjectDirectory + "\res\jkt_002.png", Imaging.ImageFormat.Png)
+                            End Using
+                        Catch ex As Exception
+                            MsgBox("Could not resize the selected cover. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\jkt_001.png"" 140 x 200" + vbCrLf +
+                               """\res\jkt_002.png"" 74 x 108", MsgBoxStyle.Exclamation, "Cover Warning")
+                        Finally
+                            Cover1Bitmap.Dispose()
+                            Cover2Bitmap.Dispose()
+                        End Try
+                    Else
+                        MsgBox("Could not resize the selected cover. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\jkt_001.png"" 140 x 200" + vbCrLf +
+                               """\res\jkt_002.png"" 74 x 108", MsgBoxStyle.Exclamation, "Cover Warning")
+                    End If
+                End If
             End If
 
+            'Background image
             If BackgroundImagePictureBox.Tag IsNot Nothing AndAlso Not File.Exists(ProjectDirectory + "\res\image\0.png") Then
-                Dim BackgroundImageBitmap As Bitmap = Utils.GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
-                If BackgroundImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(BackgroundImageBitmap)
-                End If
+                If TypeOf BackgroundImagePictureBox.Tag Is String Then
+                    Dim BackgroundImageBitmap As Bitmap = Utils.GetResizedBitmap(BackgroundImagePictureBox.Tag.ToString, 640, 350)
+                    If BackgroundImageBitmap IsNot Nothing Then
+                        If BackgroundImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                            Utils.ConvertTo32bppAndDisposeOriginal(BackgroundImageBitmap)
+                        End If
 
-                Try
-                    Using CompressedImage = Quantizer.QuantizeImage(BackgroundImageBitmap)
-                        CompressedImage.Save(ProjectDirectory + "\res\image\0.png", Imaging.ImageFormat.Png)
-                    End Using
-                Catch ex As Exception
-                    MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
-                Finally
-                    BackgroundImageBitmap.Dispose()
-                End Try
+                        Try
+                            Using CompressedImage = Quantizer.QuantizeImage(BackgroundImageBitmap)
+                                CompressedImage?.Save(ProjectDirectory + "\res\image\0.png", Imaging.ImageFormat.Png)
+                            End Using
+                        Catch ex As Exception
+                            MsgBox("Could not resize the selected background. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\0.png"" 640 x 350", MsgBoxStyle.Exclamation, "Background Warning")
+                        Finally
+                            BackgroundImageBitmap.Dispose()
+                        End Try
+                    Else
+                        MsgBox("Could not resize the selected background. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\0.png"" 640 x 350", MsgBoxStyle.Exclamation, "Background Warning")
+                    End If
+                End If
             End If
 
+            'Screenshots
             If ScreenshotImage1PictureBox.Tag IsNot Nothing AndAlso Not File.Exists(ProjectDirectory + "\res\image\1.png") Then
-                Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage1PictureBox.Tag.ToString, 640, 350)
-                If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
-                End If
+                If TypeOf ScreenshotImage1PictureBox.Tag Is String Then
+                    Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage1PictureBox.Tag.ToString, 640, 350)
+                    If ScreenshotImageBitmap IsNot Nothing Then
+                        If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                            Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
+                        End If
 
-                Try
-                    Using CompressedImage = Quantizer.QuantizeImage(ScreenshotImageBitmap)
-                        CompressedImage.Save(ProjectDirectory + "\res\image\1.png", Imaging.ImageFormat.Png)
-                    End Using
-                Catch ex As Exception
-                    MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
-                Finally
-                    ScreenshotImageBitmap.Dispose()
-                End Try
+                        Try
+                            Using CompressedImage = Quantizer.QuantizeImage(ScreenshotImageBitmap)
+                                CompressedImage?.Save(ProjectDirectory + "\res\image\1.png", Imaging.ImageFormat.Png)
+                            End Using
+                        Catch ex As Exception
+                            MsgBox("Could not resize the selected screenshot 1. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\1.png"" 640 x 350", MsgBoxStyle.Exclamation, "Screenshot 1 Warning")
+                        Finally
+                            ScreenshotImageBitmap.Dispose()
+                        End Try
+                    Else
+                        MsgBox("Could not resize the selected screenshot 1. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\1.png"" 640 x 350", MsgBoxStyle.Exclamation, "Screenshot 1 Warning")
+                    End If
+                End If
             End If
             If ScreenshotImage2PictureBox.Tag IsNot Nothing AndAlso Not File.Exists(ProjectDirectory + "\res\image\2.png") Then
-                Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage2PictureBox.Tag.ToString, 640, 350)
+                If TypeOf ScreenshotImage2PictureBox.Tag Is String Then
+                    Dim ScreenshotImageBitmap As Bitmap = Utils.GetResizedBitmap(ScreenshotImage2PictureBox.Tag.ToString, 640, 350)
+                    If ScreenshotImageBitmap IsNot Nothing Then
+                        If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
+                            Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
+                        End If
 
-                If ScreenshotImageBitmap.PixelFormat <> Imaging.PixelFormat.Format32bppArgb Then
-                    Utils.ConvertTo32bppAndDisposeOriginal(ScreenshotImageBitmap)
+                        Try
+                            Using CompressedImage = Quantizer.QuantizeImage(ScreenshotImageBitmap)
+                                CompressedImage?.Save(ProjectDirectory + "\res\image\2.png", Imaging.ImageFormat.Png)
+                            End Using
+                        Catch ex As Exception
+                            MsgBox("Could not resize the selected screenshot 2. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\2.png"" 640 x 350", MsgBoxStyle.Exclamation, "Screenshot 2 Warning")
+                        Finally
+                            ScreenshotImageBitmap.Dispose()
+                        End Try
+                    Else
+                        MsgBox("Could not resize the selected screenshot 2. Please save it manually in the project folder:" + vbCrLf +
+                               """\res\image\2.png"" 640 x 350", MsgBoxStyle.Exclamation, "Screenshot 2 Warning")
+                    End If
                 End If
-
-                Try
-                    Using CompressedImage = Quantizer.QuantizeImage(ScreenshotImageBitmap)
-                        CompressedImage.Save(ProjectDirectory + "\res\image\2.png", Imaging.ImageFormat.Png)
-                    End Using
-                Catch ex As Exception
-                    MsgBox("Could not compress PNG." + vbCrLf + ex.Message, MsgBoxStyle.Exclamation)
-                Finally
-                    ScreenshotImageBitmap.Dispose()
-                End Try
             End If
 
             'Write info.sys to res directory

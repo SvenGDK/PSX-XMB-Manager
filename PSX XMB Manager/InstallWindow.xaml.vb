@@ -6,69 +6,74 @@ Imports System.Threading
 
 Public Class InstallWindow
 
-    Public MountedDrive As MountedPSXDrive
+    Public MountedDrive As MountedPSXDrive = Nothing
 
     Private WithEvents HDL_Dump As New Process()
     Private HDLGameID As String = ""
 
-    Public ProjectToInstall As ComboBoxProjectItem
+    Public ProjectToInstall As ComboBoxProjectItem = Nothing
     Public CurrentProjectDirectory As String = ""
 
     Public InstallStatus As String
+    Public InstallForPS1 As Boolean = False
     Public InstallForPS2 As Boolean = False
 
     Private Sub InstallWindow_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
-        If ProjectToInstall IsNot Nothing Then
+        If String.IsNullOrEmpty(MountedDrive.DriveID) Then
+            MsgBox("No HDD connected, installation will be aborted.", MsgBoxStyle.Critical, "Error while trying to install")
+            Close()
+        Else
+            If ProjectToInstall IsNot Nothing Then
+                If File.Exists(ProjectToInstall.ProjectFile) Then
 
-            If File.Exists(ProjectToInstall.ProjectFile) Then
+                    Dim GameAppTitle As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(0).Split("="c)(1)
+                    Dim GameAppID As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(1).Split("="c)(1)
+                    Dim GameAppDirectory As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(2).Split("="c)(1)
 
-                Dim GameAppTitle As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(0).Split("="c)(1)
-                Dim GameAppID As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(1).Split("="c)(1)
-                Dim GameAppDirectory As String = File.ReadAllLines(ProjectToInstall.ProjectFile)(2).Split("="c)(1)
-
-                'Set cover
-                If File.Exists(GameAppDirectory + "\res\jkt_001.png") Then
-                    Dispatcher.BeginInvoke(Sub()
-                                               Dim TempBitmapImage = New BitmapImage()
-                                               TempBitmapImage.BeginInit()
-                                               TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
-                                               TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
-                                               TempBitmapImage.UriSource = New Uri(GameAppDirectory + "\res\jkt_001.png", UriKind.RelativeOrAbsolute)
-                                               TempBitmapImage.EndInit()
-                                               InstallImage.Source = TempBitmapImage
-                                           End Sub)
-                Else
-                    If IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS1/" + GameAppID + ".jpg") Then
+                    'Set cover
+                    If File.Exists(GameAppDirectory + "\res\jkt_001.png") Then
                         Dispatcher.BeginInvoke(Sub()
                                                    Dim TempBitmapImage = New BitmapImage()
                                                    TempBitmapImage.BeginInit()
                                                    TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
                                                    TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
-                                                   TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS1/" + GameAppID + ".jpg", UriKind.RelativeOrAbsolute)
+                                                   TempBitmapImage.UriSource = New Uri(GameAppDirectory + "\res\jkt_001.png", UriKind.RelativeOrAbsolute)
                                                    TempBitmapImage.EndInit()
                                                    InstallImage.Source = TempBitmapImage
                                                End Sub)
-                    ElseIf IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameAppID + ".jpg") Then
-                        Dispatcher.BeginInvoke(Sub()
-                                                   Dim TempBitmapImage = New BitmapImage()
-                                                   TempBitmapImage.BeginInit()
-                                                   TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
-                                                   TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
-                                                   TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameAppID + ".jpg", UriKind.RelativeOrAbsolute)
-                                                   TempBitmapImage.EndInit()
-                                                   InstallImage.Source = TempBitmapImage
-                                               End Sub)
+                    Else
+                        If IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS1/" + GameAppID + ".jpg") Then
+                            Dispatcher.BeginInvoke(Sub()
+                                                       Dim TempBitmapImage = New BitmapImage()
+                                                       TempBitmapImage.BeginInit()
+                                                       TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                                       TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                                       TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS1/" + GameAppID + ".jpg", UriKind.RelativeOrAbsolute)
+                                                       TempBitmapImage.EndInit()
+                                                       InstallImage.Source = TempBitmapImage
+                                                   End Sub)
+                        ElseIf IsURLValid("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameAppID + ".jpg") Then
+                            Dispatcher.BeginInvoke(Sub()
+                                                       Dim TempBitmapImage = New BitmapImage()
+                                                       TempBitmapImage.BeginInit()
+                                                       TempBitmapImage.CacheOption = BitmapCacheOption.OnLoad
+                                                       TempBitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache
+                                                       TempBitmapImage.UriSource = New Uri("https://raw.githubusercontent.com/SvenGDK/PSMT-Covers/main/PS2/" + GameAppID + ".jpg", UriKind.RelativeOrAbsolute)
+                                                       TempBitmapImage.EndInit()
+                                                       InstallImage.Source = TempBitmapImage
+                                                   End Sub)
+                        End If
                     End If
                 End If
-            End If
 
-            'Set current status
-            If Not String.IsNullOrEmpty(InstallStatus) Then
-                InstallationStatusTextBlock.Text = InstallStatus
+                'Set current status
+                If Not String.IsNullOrEmpty(InstallStatus) Then
+                    InstallationStatusTextBlock.Text = InstallStatus
+                End If
+            Else
+                MsgBox("Could not load the selected project to install.", MsgBoxStyle.Critical, "Error")
+                Close()
             End If
-        Else
-            MsgBox("Could not load the selected project to install.", MsgBoxStyle.Critical, "Error")
-            Close()
         End If
     End Sub
 
@@ -76,8 +81,10 @@ Public Class InstallWindow
         Thread.Sleep(200)
         If InstallForPS2 Then
             InstallPS2Game()
-        Else
+        ElseIf InstallForPS1 Then
             InstallPS1Game()
+        Else
+            InstallApp()
         End If
     End Sub
 
@@ -409,7 +416,7 @@ Public Class InstallWindow
                 ModifyPartitionHeader(PartitionName, False)
             Else
                 MsgBox("There was an error in creating the homebrew's PP partition." + vbCrLf + "Please check if the partition name '" + PartitionName + "' does not already exists of if HDD space is sufficient.", MsgBoxStyle.Exclamation, "Error while installing homebrew")
-                Exit Sub
+                Close()
             End If
         End If
     End Sub

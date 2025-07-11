@@ -8,12 +8,13 @@
         Title="PSX XMB Manager" Height="440" Width="875" Background="#FF252525" ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen">
     <Grid x:Name="MainGrid">
 
-        <Menu x:Name="MainMenu" Background="{x:Null}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="250" Margin="0,40,0,0">
+        <Menu x:Name="MainMenu" Background="{x:Null}" HorizontalAlignment="Left" VerticalAlignment="Top" Width="250" Margin="0,20,0,0">
             <MenuItem x:Name="StartMenuItem" Background="#FF004671" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="Start" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="ProjectsMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="Manage Projects" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="PartitionManagerMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="HDD Partition Manager" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="PS1GameLibraryMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="PS1 Games Library" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="PS2GameLibraryMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="PS2 Games Library" VerticalAlignment="Top" Width="250"/>
+            <MenuItem x:Name="UtilitiesMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="Utilities" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="XMBToolsMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="XMB Tools" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="NBDDriverMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="NBD Driver" VerticalAlignment="Top" Width="250"/>
             <MenuItem x:Name="DokanDriverMenuItem" Background="#FF00619C" Foreground="White" FontFamily="Calibri" FontSize="24" HorizontalAlignment="Left" Height="40" Header="Dokan Driver" VerticalAlignment="Top" Width="250"/>

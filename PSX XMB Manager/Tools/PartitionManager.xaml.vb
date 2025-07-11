@@ -4,8 +4,10 @@ Imports PSX_XMB_Manager.Structs
 Public Class PartitionManager
 
     Public MountedDrive As MountedPSXDrive
-    Dim PartitionsContextMenu As New ContextMenu()
-    Dim GamePartitionContextMenu As New ContextMenu()
+    Public DokanCTLPath As String
+
+    Dim WithEvents PartitionsContextMenu As New ContextMenu()
+    Dim WithEvents GamePartitionContextMenu As New ContextMenu()
 
     Dim WithEvents ModifyItem As New MenuItem With {.Header = "Modify game"}
     Dim WithEvents ModifyNameItem As New MenuItem With {.Header = "Change game title"}
@@ -13,8 +15,11 @@ Public Class PartitionManager
     Dim WithEvents ModifyDMAItem As New MenuItem With {.Header = "Change DMA"}
     Dim WithEvents ModifyVisibilityItem As New MenuItem With {.Header = "Change partition visibility"}
 
+    Dim WithEvents MountItem As New MenuItem With {.Header = "Mount partition as network folder"}
     Dim WithEvents DumpItem As New MenuItem With {.Header = "Dump partition header"}
     Dim WithEvents RemoveItem As New MenuItem With {.Header = "Remove partition (destructive)"}
+
+    Dim ListOfMountedPartitions As New List(Of Tuple(Of Partition, String))() 'Keeps partition info and assigned drive letter
 
     Private Sub LoadParititons()
         PartitionsListView.Items.Clear()
@@ -94,6 +99,7 @@ Public Class PartitionManager
     End Sub
 
     Private Sub LoadContextMenus()
+        PartitionsContextMenu.Items.Add(MountItem)
         PartitionsContextMenu.Items.Add(RemoveItem)
         PartitionsContextMenu.Items.Add(ModifyVisibilityItem)
 
@@ -108,8 +114,43 @@ Public Class PartitionManager
         GamesPartitionsListView.ContextMenu = GamePartitionContextMenu
     End Sub
 
-    Private Sub ModifyNameItem_Click(sender As Object, e As RoutedEventArgs) Handles ModifyNameItem.Click
+    Private Function MountPartition(PartitionName As String, DriveID As String) As String
+        'Get a free drive letter
+        Dim NewDriveLetter As String = Utils.FindNextAvailableDriveLetter()
+        If Not String.IsNullOrEmpty(NewDriveLetter) Then
+            'Mount the drive using pfsfuse
+            Using PFSFuse As New Process()
+                PFSFuse.StartInfo.FileName = My.Computer.FileSystem.CurrentDirectory + "\Tools\pfsfuse.exe"
+                PFSFuse.StartInfo.Arguments = $"--partition={PartitionName} {DriveID} {NewDriveLetter} -o volname={PartitionName}"
+                PFSFuse.StartInfo.UseShellExecute = False
+                PFSFuse.StartInfo.CreateNoWindow = True
+                PFSFuse.Start()
+            End Using
+            Return NewDriveLetter
+        Else
+            MsgBox("Could not find any free drive letter.", MsgBoxStyle.Critical)
+            Return Nothing
+        End If
+    End Function
 
+    Private Function UnmountPartition(DriveLetter As String) As Boolean
+        If Not String.IsNullOrEmpty(DokanCTLPath) Then
+            'Unount the drive using DokanCTL
+            Using DokanCTL As New Process()
+                DokanCTL.StartInfo.FileName = DokanCTLPath
+                DokanCTL.StartInfo.Arguments = $"/u {DriveLetter}"
+                DokanCTL.StartInfo.UseShellExecute = False
+                DokanCTL.StartInfo.CreateNoWindow = True
+                DokanCTL.Start()
+            End Using
+            Return True
+        Else
+            MsgBox("Could not unmount the selected partition.", MsgBoxStyle.Critical)
+            Return False
+        End If
+    End Function
+
+    Private Sub ModifyNameItem_Click(sender As Object, e As RoutedEventArgs) Handles ModifyNameItem.Click
         If GamesPartitionsListView.SelectedItem IsNot Nothing Then
             Dim SelectedPartition As GamePartition = CType(GamesPartitionsListView.SelectedItem, GamePartition)
             Dim NewGameTitle As String = InputBox("Please enter a new name for " + SelectedPartition.Name + " : ", "Change game title")
@@ -133,7 +174,6 @@ Public Class PartitionManager
                 ReloadPartitions()
             End If
         End If
-
     End Sub
 
     Private Sub ModifyFlagsItem_Click(sender As Object, e As RoutedEventArgs) Handles ModifyFlagsItem.Click
@@ -301,6 +341,52 @@ Public Class PartitionManager
     Private Sub CreateNewPartitionButton_Click(sender As Object, e As RoutedEventArgs) Handles CreateNewPartitionButton.Click
         Dim NewPartitionWindow As New NewPartition() With {.ShowActivated = True, .MountedDrive = MountedDrive}
         NewPartitionWindow.Show()
+    End Sub
+
+    Private Sub MountItem_Click(sender As Object, e As RoutedEventArgs) Handles MountItem.Click
+        If PartitionsListView.SelectedItem IsNot Nothing Then
+            Dim SelectedPartition As Partition = CType(PartitionsListView.SelectedItem, Partition)
+            If MountItem.Header.ToString() = "Mount partition as network folder" Then
+                'Mount selected partition
+                Dim NewMountedDriveLetter As String = MountPartition(SelectedPartition.Name, MountedDrive.DriveID)
+                ListOfMountedPartitions.Add(New Tuple(Of Partition, String)(SelectedPartition, NewMountedDriveLetter))
+
+                MsgBox($"{SelectedPartition.Name} mounted to {NewMountedDriveLetter} !", MsgBoxStyle.Information)
+            Else
+                'Get the mounted drive letter
+                Dim DriveLetterToUnmount As String = ""
+                For Each MountedDrives In ListOfMountedPartitions
+                    If MountedDrives.Item1.Name = SelectedPartition.Name Then
+                        DriveLetterToUnmount = MountedDrives.Item2
+                        Exit For
+                    End If
+                Next
+                'Unmount
+                If Not String.IsNullOrEmpty(DriveLetterToUnmount) Then
+                    If UnmountPartition(DriveLetterToUnmount) Then
+                        MsgBox($"{SelectedPartition.Name} unmounted from {DriveLetterToUnmount} !", MsgBoxStyle.Information)
+                    End If
+                End If
+            End If
+        End If
+    End Sub
+
+    Private Sub PartitionsListView_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles PartitionsListView.SelectionChanged
+        If PartitionsListView.SelectedItem IsNot Nothing Then
+            Dim SelectedPartition As Partition = CType(PartitionsListView.SelectedItem, Partition)
+            Dim Exists As Boolean = False
+            For Each MountedDrives In ListOfMountedPartitions
+                If MountedDrives.Item1.Name = SelectedPartition.Name Then
+                    Exists = True
+                    Exit For
+                End If
+            Next
+            If Exists Then
+                MountItem.Header = "Unmount partition"
+            Else
+                MountItem.Header = "Mount partition as network folder"
+            End If
+        End If
     End Sub
 
 End Class

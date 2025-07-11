@@ -4,6 +4,7 @@
         Private _HDLDriveName As String
         Private _NBDDriveName As String
         Private _DriveID As String
+        Private _ConnectedOnIP As String
 
         Public Property DriveID As String
             Get
@@ -29,6 +30,15 @@
             End Get
             Set
                 _NBDDriveName = Value
+            End Set
+        End Property
+
+        Public Property ConnectedOnIP As String
+            Get
+                Return _ConnectedOnIP
+            End Get
+            Set
+                _ConnectedOnIP = Value
             End Set
         End Property
     End Structure
